@@ -3,26 +3,35 @@
 import {
   saveAssistantMessage,
   saveUserMessage,
+  updateChatMode,
   updateIntimacy,
 } from "@/features/chat/actions/chat";
+import { ChatModeSelector } from "@/features/chat/components/ChatModeSelector";
 import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { useChatStore } from "@/features/chat/stores/chat-store";
+import { CHAT_MODE_COSTS } from "@/features/jam/lib/jam";
 import { IntimacyBar } from "@/features/intimacy/components/IntimacyBar";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { Button } from "@/shared/components/ui/Button";
 import type {
   Character,
+  CharacterMemory,
+  ChatMode,
   IntimacyLevel,
   IntimacyState,
   Message,
 } from "@/shared/types/database";
-import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 type ChatRoomProps = {
   conversationId: string;
   character: Character;
   initialMessages: Message[];
   initialIntimacy: IntimacyState | null;
+  initialChatMode: ChatMode;
+  initialMemories: CharacterMemory[];
+  initialJamBalance: number;
 };
 
 export function ChatRoom({
@@ -30,8 +39,17 @@ export function ChatRoom({
   character,
   initialMessages,
   initialIntimacy,
+  initialChatMode,
+  initialMemories,
+  initialJamBalance,
 }: ChatRoomProps) {
+  const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [chatMode, setChatMode] = useState<ChatMode>(initialChatMode);
+  const [jamBalance, setJamBalance] = useState(initialJamBalance);
+  const [memories, setMemories] = useState(initialMemories);
+  const [error, setError] = useState<string | null>(null);
+
   const {
     messages,
     draft,
@@ -59,31 +77,61 @@ export function ChatRoom({
     if (initialIntimacy) {
       setIntimacy(initialIntimacy.score, initialIntimacy.level);
     }
-  }, [initialMessages, initialIntimacy, setMessages, setIntimacy]);
+    setChatMode(initialChatMode);
+    setJamBalance(initialJamBalance);
+    setMemories(initialMemories);
+  }, [
+    initialMessages,
+    initialIntimacy,
+    initialChatMode,
+    initialJamBalance,
+    initialMemories,
+    setMessages,
+    setIntimacy,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  async function handleModeChange(mode: ChatMode) {
+    const result = await updateChatMode(conversationId, mode);
+    if ("error" in result) {
+      setError(result.error);
+    } else {
+      setChatMode(mode);
+      setError(null);
+    }
+  }
+
   async function handleSend() {
     const content = draft.trim();
     if (!content || isStreaming) return;
 
+    const cost = CHAT_MODE_COSTS[chatMode];
+    if (jamBalance < cost) {
+      setError(`Jam이 부족합니다 (필요: ${cost}, 보유: ${jamBalance})`);
+      return;
+    }
+
+    setError(null);
     setDraft("");
     setIsStreaming(true);
 
-    const userMsg = {
+    addMessage({
       id: `temp-${Date.now()}`,
-      role: "user" as const,
+      role: "user",
       content,
-    };
-    addMessage(userMsg);
+    });
 
     const saveResult = await saveUserMessage(conversationId, content);
     if ("error" in saveResult) {
+      setError(saveResult.error);
       setIsStreaming(false);
       return;
     }
+
+    setJamBalance(saveResult.jamBalance);
 
     addMessage({
       id: `stream-${Date.now()}`,
@@ -138,6 +186,8 @@ export function ChatRoom({
       if (updatedIntimacy) {
         setIntimacy(updatedIntimacy.score, updatedIntimacy.level);
       }
+
+      router.refresh();
     } catch {
       updateStreamingMessage("응답을 받지 못했어요. 다시 시도해주세요.");
       finalizeStreamingMessage();
@@ -155,19 +205,45 @@ export function ChatRoom({
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-border bg-surface px-4 py-3">
-        <Avatar src={character.avatar_url} name={character.name} size="md" />
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-foreground truncate">
-            {character.name}
-          </h2>
-          <IntimacyBar
-            score={intimacyScore}
-            level={intimacyLevel as IntimacyLevel}
-            compact
-          />
+      <header className="flex flex-col gap-2 border-b border-border bg-surface px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Avatar src={character.avatar_url} name={character.name} size="md" />
+          <div className="flex-1 min-w-0">
+            <h2 className="font-semibold text-foreground truncate">
+              {character.name}
+            </h2>
+            <IntimacyBar
+              score={intimacyScore}
+              level={intimacyLevel as IntimacyLevel}
+              compact
+            />
+          </div>
+          <span className="shrink-0 text-xs font-semibold text-amber-600">
+            🍯 {jamBalance}
+          </span>
         </div>
+        <ChatModeSelector
+          mode={chatMode}
+          onChange={handleModeChange}
+          disabled={isStreaming}
+        />
       </header>
+
+      {memories.length > 0 && (
+        <div className="border-b border-border bg-primary-soft/30 px-4 py-2">
+          <p className="text-xs font-medium text-primary mb-1">캐릭터 기억</p>
+          <div className="flex flex-wrap gap-1">
+            {memories.slice(-5).map((m) => (
+              <span
+                key={m.id}
+                className="rounded-full bg-white/80 px-2 py-0.5 text-xs text-muted"
+              >
+                {m.content}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {messages.map((msg) => (
@@ -182,12 +258,15 @@ export function ChatRoom({
       </div>
 
       <div className="border-t border-border bg-surface p-4">
+        {error && (
+          <p className="mb-2 text-xs text-red-500">{error}</p>
+        )}
         <div className="flex gap-2">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="메시지를 입력하세요..."
+            placeholder={`메시지를 입력하세요... (${CHAT_MODE_COSTS[chatMode]} Jam)`}
             disabled={isStreaming}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"

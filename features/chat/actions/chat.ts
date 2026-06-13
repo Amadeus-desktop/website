@@ -4,9 +4,13 @@ import {
   calculateNewIntimacy,
   estimateIntimacyDelta,
 } from "@/features/intimacy/lib/intimacy";
+import { getJamCost } from "@/features/jam/lib/jam";
+import { deductJam } from "@/features/jam/actions/jam";
+import { saveMemoriesFromMessage } from "@/features/memory/actions/memory";
 import { sendMessageSchema } from "@/features/chat/schemas/chat";
 import { createClient } from "@/shared/lib/supabase/server";
 import type {
+  ChatMode,
   ConversationWithCharacter,
   IntimacyState,
   Message,
@@ -134,10 +138,38 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
   return data ?? [];
 }
 
+export async function updateChatMode(
+  conversationId: string,
+  chatMode: ChatMode,
+): Promise<{ success: true } | { error: string }> {
+  const validModes: ChatMode[] = ["simple", "long", "exciting"];
+  if (!validModes.includes(chatMode)) {
+    return { error: "유효하지 않은 채팅 모드입니다" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다" };
+
+  const { error } = await supabase
+    .from("conversations")
+    .update({ chat_mode: chatMode })
+    .eq("id", conversationId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/chat/${conversationId}`);
+  return { success: true };
+}
+
 export async function saveUserMessage(
   conversationId: string,
   content: string,
-): Promise<{ messageId: string } | { error: string }> {
+): Promise<{ messageId: string; jamBalance: number } | { error: string }> {
   const parsed = sendMessageSchema.safeParse({ conversationId, content });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다" };
@@ -150,6 +182,23 @@ export async function saveUserMessage(
 
   if (!user) {
     return { error: "로그인이 필요합니다" };
+  }
+
+  const { data: conversation } = await supabase
+    .from("conversations")
+    .select("chat_mode")
+    .eq("id", conversationId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!conversation) {
+    return { error: "대화를 찾을 수 없습니다" };
+  }
+
+  const jamCost = getJamCost(conversation.chat_mode as ChatMode);
+  const jamResult = await deductJam(jamCost);
+  if ("error" in jamResult) {
+    return { error: jamResult.error };
   }
 
   const { data, error } = await supabase
@@ -171,7 +220,9 @@ export async function saveUserMessage(
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", conversationId);
 
-  return { messageId: data.id };
+  await saveMemoriesFromMessage(conversationId, parsed.data.content);
+
+  return { messageId: data.id, jamBalance: jamResult.balance };
 }
 
 export async function saveAssistantMessage(

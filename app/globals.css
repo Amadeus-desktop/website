@@ -1,14 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff8f9;
-  --foreground: #1a1a2e;
-  --surface: #ffffff;
-  --surface-elevated: #faf5f6;
-  --primary: #ff6b8a;
-  --primary-soft: #fff0f3;
-  --muted: #8b7e82;
-  --border: #f0e4e7;
+  --background: #191919;
+  --foreground: #ffffff;
+  --surface: #252525;
+  --surface-elevated: #303030;
+  --primary: #ff4d8d;
+  --primary-soft: rgba(255, 77, 141, 0.15);
+  --muted: #999999;
+  --muted-2: #666666;
+  --border: #333333;
+  --tag: #6b8cce;
+  --header-h: 56px;
+  --sidebar-w: 72px;
 }
 
 @theme inline {
@@ -19,19 +23,38 @@
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
   --color-muted: var(--muted);
+  --color-muted-2: var(--muted-2);
   --color-border: var(--border);
-  --radius-card: 1rem;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-tag: var(--tag);
+  --radius-card: 12px;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif;
+}
+
+@font-face {
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/woff2/PretendardVariable.woff2")
+    format("woff2-variations");
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary-soft) transparent;
+  scrollbar-color: #444 transparent;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }

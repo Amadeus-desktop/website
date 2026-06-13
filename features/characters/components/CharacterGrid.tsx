@@ -12,14 +12,14 @@ export function CharacterGrid({
 }: CharacterGridProps) {
   if (characters.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-border py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-20 text-center">
         <p className="text-muted">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {characters.map((character) => (
         <CharacterCard key={character.id} character={character} />
       ))}

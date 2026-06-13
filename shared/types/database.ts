@@ -23,7 +23,24 @@ export type Conversation = {
   id: string;
   user_id: string;
   character_id: string;
+  chat_mode: ChatMode;
   last_message_at: string;
+  created_at: string;
+};
+
+export type ChatMode = "simple" | "long" | "exciting";
+
+export type JamBalance = {
+  user_id: string;
+  balance: number;
+  last_daily_claim: string | null;
+  created_at: string;
+};
+
+export type CharacterMemory = {
+  id: string;
+  conversation_id: string;
+  content: string;
   created_at: string;
 };
 

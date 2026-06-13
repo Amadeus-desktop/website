@@ -26,7 +26,7 @@ function generateMockResponse(
   params: StreamChatParams,
   userMessage: string,
 ): string {
-  const { character, intimacyLevel } = params;
+  const { character, intimacyLevel, chatMode, memories = [] } = params;
 
   const responses: Record<string, string[]> = {
     stranger: [
@@ -51,8 +51,30 @@ function generateMockResponse(
     ],
   };
 
+  const excitingExtras = [
+    " …심장이 두근거리는 것 같아.",
+    " 네 옆에 있고 싶다.",
+    " 이 순간이 영원했으면 좋겠어.",
+  ];
+
+  const longExtras = [
+    " 사실 그 얘기를 듣고 많이 생각했어. 네가 어떤 마음인지 더 알고 싶어.",
+    " 우리 사이가 이렇게 자연스럽게 가까워지는 게 신기해. 앞으로도 많이 이야기하자.",
+  ];
+
   const pool = responses[intimacyLevel] ?? responses.stranger;
-  const base = pool[Math.floor(Math.random() * pool.length)];
+  let base = pool[Math.floor(Math.random() * pool.length)];
+
+  if (chatMode === "exciting") {
+    base += excitingExtras[Math.floor(Math.random() * excitingExtras.length)];
+  } else if (chatMode === "long") {
+    base += longExtras[Math.floor(Math.random() * longExtras.length)];
+  }
+
+  if (memories.length > 0) {
+    const memoryRef = memories[memories.length - 1];
+    base += ` (${memoryRef} — 기억하고 있어.)`;
+  }
 
   if (userMessage.includes("?") || userMessage.includes("？")) {
     return `${base} 궁금한 게 있으면 뭐든 물어봐.`;
@@ -70,10 +92,11 @@ export class MockProvider implements LLMProvider {
       "";
 
     const fullResponse = generateMockResponse(params, lastUserMessage);
+    const delay = params.chatMode === "long" ? 50 : 80;
     const words = fullResponse.split(" ");
 
     for (const word of words) {
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      await new Promise((resolve) => setTimeout(resolve, delay));
       yield word + " ";
     }
   }

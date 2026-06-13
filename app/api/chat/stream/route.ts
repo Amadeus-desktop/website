@@ -1,8 +1,9 @@
 import { getLLMProvider } from "@/features/ai";
 import { buildSystemPrompt } from "@/features/ai/prompts/system-prompt";
 import { getConversation, getMessages } from "@/features/chat/actions/chat";
+import { getMemories } from "@/features/memory/actions/memory";
 import { createClient } from "@/shared/lib/supabase/server";
-import type { IntimacyLevel } from "@/shared/types/database";
+import type { ChatMode, IntimacyLevel } from "@/shared/types/database";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -29,12 +30,23 @@ export async function POST(request: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const messages = await getMessages(conversationId);
+  const [messages, memories] = await Promise.all([
+    getMessages(conversationId),
+    getMemories(conversationId),
+  ]);
+
   const intimacyLevel =
     (conversation.intimacy_states?.level as IntimacyLevel) ?? "stranger";
+  const chatMode = (conversation.chat_mode as ChatMode) ?? "simple";
+  const memoryContents = memories.map((m) => m.content);
 
   const character = conversation.characters;
-  const systemPrompt = buildSystemPrompt(character, intimacyLevel);
+  const systemPrompt = buildSystemPrompt(
+    character,
+    intimacyLevel,
+    chatMode,
+    memoryContents,
+  );
   const provider = getLLMProvider();
 
   const chatMessages = [
@@ -59,6 +71,8 @@ export async function POST(request: Request) {
             greeting: character.greeting,
           },
           intimacyLevel,
+          chatMode,
+          memories: memoryContents,
         })) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`),

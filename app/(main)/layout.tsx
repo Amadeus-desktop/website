@@ -1,8 +1,8 @@
+import { IconSidebar } from "@/shared/components/layout/IconSidebar";
+import { MainTabs } from "@/shared/components/layout/MainTabs";
+import { TopHeader } from "@/shared/components/layout/TopHeader";
 import { getCurrentUser } from "@/features/auth/actions/auth";
-import {
-  BottomTabBar,
-  Sidebar,
-} from "@/shared/components/layout/AppNav";
+import { getJamBalance } from "@/features/jam/actions/jam";
 
 export default async function MainLayout({
   children,
@@ -10,18 +10,15 @@ export default async function MainLayout({
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
+  const jamBalance = user ? await getJamBalance() : null;
 
   return (
-    <div className="flex min-h-full flex-1">
-      <Sidebar userEmail={user?.email} />
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center border-b border-border bg-surface px-4 lg:hidden">
-          <span className="text-lg font-bold text-primary">LoveyDovey</span>
-        </header>
-        <main className="flex-1 overflow-y-auto px-4 py-6 pb-20 lg:pb-6">
-          {children}
-        </main>
-        <BottomTabBar />
+    <div className="flex min-h-screen bg-background">
+      <IconSidebar />
+      <div className="flex min-h-screen flex-1 flex-col">
+        <TopHeader userEmail={user?.email} jamBalance={jamBalance} />
+        <MainTabs />
+        <main className="flex-1 px-4 py-4 lg:px-6">{children}</main>
       </div>
     </div>
   );

@@ -10,18 +10,13 @@ export function MessageBubble({ role, content, isStreaming }: MessageBubbleProps
   const isUser = role === "user";
 
   return (
-    <div
-      className={cn(
-        "flex w-full",
-        isUser ? "justify-end" : "justify-start",
-      )}
-    >
+    <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
           isUser
             ? "rounded-br-md bg-primary text-white"
-            : "rounded-bl-md bg-surface border border-border text-foreground",
+            : "rounded-bl-md bg-surface-elevated text-foreground",
         )}
       >
         {content}

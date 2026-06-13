@@ -5,6 +5,9 @@ import {
   getConversations,
   getMessages,
 } from "@/features/chat/actions/chat";
+import { getJamBalance } from "@/features/jam/actions/jam";
+import { getMemories } from "@/features/memory/actions/memory";
+import type { ChatMode } from "@/shared/types/database";
 import { notFound } from "next/navigation";
 
 type ChatPageProps = {
@@ -13,11 +16,14 @@ type ChatPageProps = {
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const { id } = await params;
-  const [conversation, messages, conversations] = await Promise.all([
-    getConversation(id),
-    getMessages(id),
-    getConversations(),
-  ]);
+  const [conversation, messages, conversations, memories, jamBalance] =
+    await Promise.all([
+      getConversation(id),
+      getMessages(id),
+      getConversations(),
+      getMemories(id),
+      getJamBalance(),
+    ]);
 
   if (!conversation) {
     notFound();
@@ -40,6 +46,9 @@ export default async function ChatPage({ params }: ChatPageProps) {
           character={conversation.characters}
           initialMessages={messages}
           initialIntimacy={conversation.intimacy_states}
+          initialChatMode={(conversation.chat_mode as ChatMode) ?? "simple"}
+          initialMemories={memories}
+          initialJamBalance={jamBalance?.balance ?? 0}
         />
       </div>
     </div>

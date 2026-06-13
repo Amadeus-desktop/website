@@ -1,5 +1,7 @@
 import type { Character, IntimacyLevel } from "@/shared/types/database";
 
+export type ChatMode = "simple" | "long" | "exciting";
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
@@ -15,6 +17,8 @@ export type StreamChatParams = {
   messages: ChatMessage[];
   character: CharacterContext;
   intimacyLevel: IntimacyLevel;
+  chatMode: ChatMode;
+  memories?: string[];
 };
 
 export type StreamChatResult = {
