@@ -11,6 +11,7 @@ import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { useChatStore } from "@/features/chat/stores/chat-store";
 import { CHAT_MODE_COSTS } from "@/features/jam/lib/jam";
 import { IntimacyBar } from "@/features/intimacy/components/IntimacyBar";
+import { GiHoneyJar } from "@/shared/components/icons";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { Button } from "@/shared/components/ui/Button";
 import type {
@@ -218,8 +219,9 @@ export function ChatRoom({
               compact
             />
           </div>
-          <span className="shrink-0 text-xs font-semibold text-amber-600">
-            🍯 {jamBalance}
+          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-600">
+            <GiHoneyJar className="h-3.5 w-3.5" aria-hidden />
+            {jamBalance}
           </span>
         </div>
         <ChatModeSelector

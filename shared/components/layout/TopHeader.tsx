@@ -1,7 +1,12 @@
 "use client";
 
+import { HiMagnifyingGlass } from "@/shared/components/icons";
+import { APP_NAME } from "@/shared/config/app";
+import { TYPO } from "@/shared/config/layout";
 import { JamBadge } from "@/features/jam/components/JamBadge";
 import { logout } from "@/features/auth/actions/auth";
+import { LanguageSwitcher } from "@/shared/components/layout/LanguageSwitcher";
+import { useT } from "@/shared/i18n/use-translate";
 import type { JamBalance } from "@/shared/types/database";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +18,7 @@ type TopHeaderProps = {
 };
 
 export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
+  const t = useT();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -26,69 +32,73 @@ export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-[var(--header-h)] items-center justify-between border-b border-border bg-background px-4 lg:px-6">
-      <Link href="/" className="text-xl font-bold tracking-tight text-primary">
-        LoveyDovey
-      </Link>
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
+      <div className="mx-auto flex h-[var(--header-h)] w-full max-w-[var(--content-max-w)] items-center justify-between gap-4 px-4 md:px-6">
+        <Link
+          href="/"
+          className={`font-bold tracking-tight text-primary ${TYPO.header}`}
+        >
+          {APP_NAME}
+        </Link>
 
-      <div className="flex items-center gap-2 sm:gap-4">
-        {searchOpen ? (
-          <form onSubmit={handleSearch} className="flex items-center gap-2">
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="캐릭터 검색..."
-              className="h-9 w-36 rounded-full border border-border bg-surface px-3 text-sm text-foreground outline-none focus:border-primary sm:w-52"
-            />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageSwitcher compact />
+
+          {searchOpen ? (
+            <form onSubmit={handleSearch} className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("common.search")}
+                className="h-10 w-40 rounded-full border border-border bg-surface px-4 text-sm text-foreground outline-none focus:border-primary sm:w-56"
+              />
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="text-sm text-muted hover:text-foreground"
+              >
+                {t("common.close")}
+              </button>
+            </form>
+          ) : (
             <button
-              type="button"
-              onClick={() => setSearchOpen(false)}
-              className="text-xs text-muted hover:text-foreground"
+              onClick={() => setSearchOpen(true)}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-surface"
+              aria-label={t("common.search")}
             >
-              닫기
+              <HiMagnifyingGlass className="h-5 w-5" aria-hidden />
             </button>
-          </form>
-        ) : (
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-foreground hover:bg-surface"
-            aria-label="검색"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3-3" />
-            </svg>
-          </button>
-        )}
+          )}
 
-        {jamBalance && <JamBadge balance={jamBalance} compact />}
+          {jamBalance && <JamBadge balance={jamBalance} compact />}
 
-        {userEmail ? (
-          <div className="group relative">
-            <button className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-surface-elevated text-xs font-bold text-primary">
-              {userEmail[0]?.toUpperCase()}
-            </button>
-            <div className="invisible absolute right-0 top-full z-50 mt-2 w-40 rounded-xl border border-border bg-surface p-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
-              <p className="truncate px-2 py-1 text-xs text-muted">{userEmail}</p>
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-foreground hover:bg-surface-elevated"
-                >
-                  로그아웃
-                </button>
-              </form>
+          {userEmail ? (
+            <div className="group relative">
+              <button className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-elevated text-sm font-bold text-primary">
+                {userEmail[0]?.toUpperCase()}
+              </button>
+              <div className="invisible absolute right-0 top-full z-50 mt-2 w-44 rounded-xl border border-border bg-surface p-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
+                <p className="truncate px-2 py-1 text-xs text-muted">{userEmail}</p>
+                <form action={logout}>
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg px-2 py-2 text-left text-sm text-foreground hover:bg-surface-elevated"
+                  >
+                    {t("common.logout")}
+                  </button>
+                </form>
+              </div>
             </div>
-          </div>
-        ) : (
-          <Link
-            href="/login"
-            className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-          >
-            로그인
-          </Link>
-        )}
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex h-8 items-center rounded-full bg-primary px-3 text-xs font-semibold text-white hover:opacity-90"
+            >
+              {t("common.login")}
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

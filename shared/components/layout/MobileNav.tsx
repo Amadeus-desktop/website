@@ -7,12 +7,12 @@ import { cn } from "@/shared/lib/cn";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function IconSidebar() {
+export function MobileNav() {
   const pathname = usePathname();
   const t = useT();
 
   return (
-    <aside className="hidden md:flex w-[var(--sidebar-w)] shrink-0 flex-col items-center gap-3 border-r border-border bg-background py-5">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-background md:hidden">
       {SIDEBAR_NAV.map((item) => {
         const isActive =
           item.href === "/"
@@ -24,18 +24,16 @@ export function IconSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            title={t(item.labelKey)}
             className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
-              isActive
-                ? "bg-surface-elevated text-foreground"
-                : "text-muted hover:bg-surface hover:text-foreground",
+              "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium",
+              isActive ? "text-primary" : "text-muted",
             )}
           >
-            <Icon className="h-6 w-6" aria-hidden />
+            <Icon className="h-5 w-5" aria-hidden />
+            {t(item.labelKey)}
           </Link>
         );
       })}
-    </aside>
+    </nav>
   );
 }

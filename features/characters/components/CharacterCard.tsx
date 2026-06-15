@@ -1,3 +1,8 @@
+"use client";
+
+import { HiUser } from "@/shared/components/icons";
+import { TYPO } from "@/shared/config/layout";
+import { useT } from "@/shared/i18n/use-translate";
 import type { Character } from "@/shared/types/database";
 import Link from "next/link";
 
@@ -21,18 +26,18 @@ function getGradient(name: string) {
   return `linear-gradient(160deg, hsl(${h} 45% 28%), hsl(${(h + 40) % 360} 35% 18%))`;
 }
 
-function getTags(character: Character): string[] {
-  const tags: string[] = [];
-  if (character.is_official) tags.push("Official");
-  if (character.gender === "male") tags.push("Handsome");
-  if (character.gender === "female") tags.push("Beautiful");
-  if (character.personality.includes("따뜻")) tags.push("Warm");
-  if (character.personality.includes("차분")) tags.push("Calm");
-  if (character.personality.includes("밝")) tags.push("Cheerful");
-  if (character.personality.includes("쿨")) tags.push("Cool");
-  if (character.personality.includes("신비")) tags.push("Mysterious");
-  if (tags.length < 2) tags.push("AI Character");
-  return tags.slice(0, 3);
+function getTagKeys(character: Character): string[] {
+  const keys: string[] = [];
+  if (character.is_official) keys.push("tag.official");
+  if (character.gender === "male") keys.push("tag.handsome");
+  if (character.gender === "female") keys.push("tag.beautiful");
+  if (character.personality.includes("따뜻")) keys.push("tag.warm");
+  if (character.personality.includes("차분")) keys.push("tag.calm");
+  if (character.personality.includes("밝")) keys.push("tag.cheerful");
+  if (character.personality.includes("쿨")) keys.push("tag.cool");
+  if (character.personality.includes("신비")) keys.push("tag.mysterious");
+  if (keys.length < 2) keys.push("tag.ai");
+  return keys.slice(0, 3);
 }
 
 type CharacterCardProps = {
@@ -40,12 +45,13 @@ type CharacterCardProps = {
 };
 
 export function CharacterCard({ character }: CharacterCardProps) {
-  const tags = getTags(character);
+  const t = useT();
+  const tagKeys = getTagKeys(character);
   const views = formatViews(character.id);
 
   return (
-    <Link href={`/characters/${character.id}`} className="group block">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-xl">
+    <Link href={`/characters/${character.id}`} className="group block min-w-0">
+      <div className="relative aspect-[3/4] min-h-[200px] overflow-hidden rounded-xl md:rounded-2xl md:min-h-[260px]">
         {character.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -55,33 +61,33 @@ export function CharacterCard({ character }: CharacterCardProps) {
           />
         ) : (
           <div
-            className="flex h-full w-full items-end justify-center pb-8"
+            className="flex h-full w-full items-end justify-center pb-10"
             style={{ background: getGradient(character.name) }}
           >
-            <span className="text-5xl font-bold text-white/20">
+            <span className="text-6xl font-bold text-white/20 md:text-7xl">
               {character.name[0]}
             </span>
           </div>
         )}
-        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs text-white backdrop-blur-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z" />
-          </svg>
+        <div className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs text-white backdrop-blur-sm md:text-sm">
+          <HiUser className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {views}
         </div>
       </div>
 
-      <div className="mt-2 space-y-1">
-        <h3 className="truncate text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+      <div className="mt-3 space-y-1.5">
+        <h3
+          className={`truncate group-hover:text-primary transition-colors ${TYPO.cardTitle}`}
+        >
           {character.name}
         </h3>
-        <p className="line-clamp-1 text-xs text-muted">
+        <p className={`line-clamp-2 leading-snug ${TYPO.cardSubtitle} text-muted`}>
           {character.greeting}
         </p>
-        <div className="flex flex-wrap gap-1">
-          {tags.map((tag) => (
-            <span key={tag} className="text-xs text-tag">
-              #{tag}
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
+          {tagKeys.map((key) => (
+            <span key={key} className={`${TYPO.cardTag} text-tag`}>
+              #{t(key)}
             </span>
           ))}
         </div>

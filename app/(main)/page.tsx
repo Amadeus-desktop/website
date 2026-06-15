@@ -3,6 +3,8 @@ import { CategoryFilters } from "@/features/characters/components/CategoryFilter
 import { CharacterGrid } from "@/features/characters/components/CharacterGrid";
 import { SortTabs } from "@/features/characters/components/SortTabs";
 import { getCharacters } from "@/features/characters/queries/characters";
+import { getServerLocale } from "@/shared/i18n/server";
+import { translate } from "@/shared/i18n";
 import type { Character } from "@/shared/types/database";
 
 type HomePageProps = {
@@ -47,15 +49,13 @@ function sortCharacters(characters: Character[], sort: string) {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const { q, category = "all", sort = "trending" } = await searchParams;
+  const locale = await getServerLocale();
   const all = await getCharacters(q);
-  const characters = sortCharacters(
-    filterByCategory(all, category),
-    sort,
-  );
+  const characters = sortCharacters(filterByCategory(all, category), sort);
 
   return (
-    <div className="flex flex-col gap-4">
-      <Suspense fallback={<div className="h-9" />}>
+    <div className="flex flex-col gap-5 md:gap-6">
+      <Suspense fallback={<div className="h-10 animate-pulse rounded-full bg-surface-elevated" />}>
         <CategoryFilters />
       </Suspense>
       <Suspense fallback={<div className="h-6" />}>
@@ -63,15 +63,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </Suspense>
       <CharacterGrid
         characters={characters}
-        emptyMessage="검색 결과가 없습니다"
+        emptyMessage={translate(locale, "common.empty")}
       />
       {characters.length > 0 && (
-        <div className="flex justify-center pt-4">
+        <div className="flex justify-center pt-2">
           <button
             type="button"
-            className="rounded-full bg-surface-elevated px-8 py-2.5 text-sm font-medium text-muted"
+            className="rounded-full bg-surface-elevated px-10 py-3 text-sm font-medium text-muted md:text-base"
           >
-            more
+            {translate(locale, "common.more")}
           </button>
         </div>
       )}
