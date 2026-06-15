@@ -42,4 +42,8 @@ export const ko: Messages = {
   "tag.ai": "AI 캐릭터",
   "jam.daily": "일일 받기",
   "language.label": "언어",
+  "footer.terms": "서비스 이용약관",
+  "footer.privacy": "개인정보처리방침",
+  "footer.contact": "고객센터",
+  "footer.legalNav": "법적 고지",
 };

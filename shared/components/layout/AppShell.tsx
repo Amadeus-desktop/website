@@ -5,6 +5,7 @@ import { IconSidebar } from "@/shared/components/layout/IconSidebar";
 import { MainTabs } from "@/shared/components/layout/MainTabs";
 import { TopHeader } from "@/shared/components/layout/TopHeader";
 import { ContentContainer } from "@/shared/components/layout/ContentContainer";
+import { SiteFooter } from "@/shared/components/layout/SiteFooter";
 import { I18nProvider } from "@/shared/i18n/provider";
 import type { Locale } from "@/shared/config/app";
 import type { JamBalance } from "@/shared/types/database";
@@ -34,7 +35,10 @@ export function AppShell({
           <TopHeader userEmail={userEmail} jamBalance={jamBalance} />
           <MainTabs />
           <main className="flex-1 overflow-y-auto px-4 py-5 pb-20 md:px-6 md:py-6 md:pb-6">
-            <ContentContainer>{children}</ContentContainer>
+            <ContentContainer className="flex min-h-full flex-col">
+              {children}
+              <SiteFooter className="mt-10" />
+            </ContentContainer>
           </main>
           <MobileNav />
         </div>

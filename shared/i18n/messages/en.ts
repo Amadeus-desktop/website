@@ -42,4 +42,8 @@ export const en: Messages = {
   "tag.ai": "AI Character",
   "jam.daily": "Daily",
   "language.label": "Language",
+  "footer.terms": "Terms of Service",
+  "footer.privacy": "Privacy Policy",
+  "footer.contact": "Contact",
+  "footer.legalNav": "Legal",
 };

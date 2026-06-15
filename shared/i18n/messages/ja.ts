@@ -42,4 +42,8 @@ export const ja: Messages = {
   "tag.ai": "AIキャラ",
   "jam.daily": "デイリー",
   "language.label": "言語",
+  "footer.terms": "利用規約",
+  "footer.privacy": "プライバシーポリシー",
+  "footer.contact": "お問い合わせ",
+  "footer.legalNav": "法的情報",
 };
