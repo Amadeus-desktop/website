@@ -1,10 +1,7 @@
 import { getLLMProvider } from "@/features/ai";
-import { buildPersonaSystemPrompt } from "@/features/ai/prompts/persona-prompt";
-import { getConversation, getMessages } from "@/features/chat/actions/chat";
+import { preparePersonaChat } from "@/features/chat/services/persona-chat-pipeline";
 import { personaToChatContext } from "@/features/personas/lib/chat-context";
-import { getLevelFromScore } from "@/features/intimacy/lib/intimacy";
 import { createClient } from "@/shared/lib/supabase/server";
-import type { ChatMode, IntimacyLevel } from "@/shared/types/database";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -22,55 +19,33 @@ export async function POST(request: Request) {
     content: string;
   };
 
-  if (!conversationId || !content) {
+  if (!conversationId || !content?.trim()) {
     return new Response("Bad Request", { status: 400 });
   }
 
-  const conversation = await getConversation(conversationId);
-  if (!conversation || conversation.user_id !== user.id) {
+  const prepared = await preparePersonaChat(user.id, conversationId, content.trim());
+  if (!prepared) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const messages = await getMessages(conversationId);
-  const persona = conversation.personas;
-  const affinity = conversation.persona_states?.affinity ?? 0;
-  const intimacyLevel = getLevelFromScore(affinity) as IntimacyLevel;
-  const chatMode = (conversation.chat_mode as ChatMode) ?? "simple";
-  const relationshipStage = conversation.persona_states?.relationship_stage;
-
-  const systemPrompt = buildPersonaSystemPrompt(
-    persona,
-    intimacyLevel,
-    chatMode,
-    [],
-    relationshipStage,
-  );
+  const chatContext = personaToChatContext(prepared.persona);
   const provider = getLLMProvider();
-  const chatContext = personaToChatContext(persona);
-
-  const chatMessages = [
-    ...messages.map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    { role: "user" as const, content },
-  ];
 
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       try {
         for await (const chunk of provider.streamChat({
-          systemPrompt,
-          messages: chatMessages,
+          systemPrompt: prepared.systemPrompt,
+          messages: prepared.messages,
           character: {
             name: chatContext.name,
             personality: chatContext.personality,
             backstory: chatContext.backstory,
             greeting: chatContext.greeting,
           },
-          intimacyLevel,
-          chatMode,
+          intimacyLevel: prepared.intimacyLevel,
+          chatMode: prepared.chatMode,
           memories: [],
         })) {
           controller.enqueue(

@@ -29,7 +29,8 @@ export class GeminiProvider implements LLMProvider {
           parts: [{ text: message.content }],
         })),
         generationConfig: {
-          temperature: 0.9,
+          temperature: 0.85,
+          topP: 0.9,
         },
       }),
     });

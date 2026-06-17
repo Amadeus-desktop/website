@@ -3,10 +3,26 @@ import { MockProvider } from "@/features/ai/providers/mock";
 import { OpenAIProvider } from "@/features/ai/providers/openai";
 import type { LLMProvider } from "@/features/ai/types";
 
-export function getLLMProvider(): LLMProvider {
-  const provider = (process.env.LLM_PROVIDER ?? "mock").toLowerCase();
+function resolveProviderName(): string {
+  const configured = process.env.LLM_PROVIDER?.trim().toLowerCase();
 
-  switch (provider) {
+  if (configured) {
+    return configured;
+  }
+
+  if (process.env.GEMINI_API_KEY?.trim()) {
+    return "gemini";
+  }
+
+  if (process.env.OPENAI_API_KEY?.trim()) {
+    return "openai";
+  }
+
+  return "mock";
+}
+
+export function getLLMProvider(): LLMProvider {
+  switch (resolveProviderName()) {
     case "openai":
       return new OpenAIProvider();
     case "gemini":
@@ -18,5 +34,5 @@ export function getLLMProvider(): LLMProvider {
 }
 
 export function getLLMProviderName(): string {
-  return (process.env.LLM_PROVIDER ?? "mock").toLowerCase();
+  return resolveProviderName();
 }
