@@ -1,3 +1,5 @@
+import { ensureUserPersona } from "@/features/personas/actions/provision";
+import { PERSONA_SELECT } from "@/features/personas/lib/columns";
 import { createClient } from "@/shared/lib/supabase/server";
 import type { Persona } from "@/shared/types/database";
 
@@ -11,7 +13,7 @@ export async function getPersonaBySlug(
 
   const { data, error } = await supabase
     .from("personas")
-    .select("*")
+    .select(PERSONA_SELECT)
     .eq("user_id", userId)
     .eq("slug", slug)
     .is("deleted_at", null)
@@ -23,4 +25,12 @@ export async function getPersonaBySlug(
   }
 
   return (data as Persona | null) ?? null;
+}
+
+/** Resolve catalog/detail id to the signed-in user's persona row with full JSON. */
+export async function resolvePersonaForUser(
+  userId: string,
+  personaId: string,
+): Promise<Persona | null> {
+  return ensureUserPersona(userId, personaId);
 }

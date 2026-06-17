@@ -4,27 +4,43 @@ import {
   CATALOG_PERSONA_SLUGS,
   isCatalogSlug,
 } from "@/features/personas/lib/catalog";
+import { PERSONA_SELECT } from "@/features/personas/lib/columns";
+import { getCanonicalTemplateBySlug } from "@/features/personas/lib/resolve-template";
 import { createClient } from "@/shared/lib/supabase/server";
 import type { Persona } from "@/shared/types/database";
 
-async function getCatalogTemplate(slug: string): Promise<Persona | null> {
-  const supabase = await createClient();
+async function syncUserPersonaFromTemplate(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  existing: Persona,
+  template: Persona,
+): Promise<Persona> {
+  if (template.version <= existing.version) {
+    return existing;
+  }
 
   const { data, error } = await supabase
     .from("personas")
-    .select("*")
-    .eq("slug", slug)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .update({
+      name: template.name,
+      slug: template.slug,
+      base_tone: template.base_tone,
+      relationship_type: template.relationship_type,
+      world_type: template.world_type,
+      static_prompt_json: template.static_prompt_json,
+      version: template.version,
+    })
+    .eq("id", existing.id)
+    .eq("user_id", userId)
+    .select(PERSONA_SELECT)
+    .single();
 
-  if (error) {
-    console.error("getCatalogTemplate error:", error);
-    return null;
+  if (error || !data) {
+    console.error("syncUserPersonaFromTemplate error:", error);
+    return existing;
   }
 
-  return (data as Persona | null) ?? null;
+  return data as Persona;
 }
 
 export async function ensureUserPersona(
@@ -35,9 +51,7 @@ export async function ensureUserPersona(
 
   const { data: catalogPersona, error: catalogError } = await supabase
     .from("personas")
-    .select(
-      "id, user_id, name, slug, base_tone, relationship_type, world_type, static_prompt_json, version",
-    )
+    .select(PERSONA_SELECT)
     .eq("id", catalogPersonaId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -51,39 +65,49 @@ export async function ensureUserPersona(
     return catalogPersona as Persona;
   }
 
+  const template =
+    (await getCanonicalTemplateBySlug(supabase, catalogPersona.slug)) ??
+    (catalogPersona as Persona);
+
   if (catalogPersona.user_id === userId) {
-    return catalogPersona as Persona;
+    return syncUserPersonaFromTemplate(
+      supabase,
+      userId,
+      catalogPersona as Persona,
+      template,
+    );
   }
 
   const { data: existing } = await supabase
     .from("personas")
-    .select(
-      "id, user_id, name, slug, base_tone, relationship_type, world_type, static_prompt_json, version, created_at, updated_at, deleted_at",
-    )
+    .select(PERSONA_SELECT)
     .eq("user_id", userId)
     .eq("slug", catalogPersona.slug)
     .is("deleted_at", null)
     .maybeSingle();
 
   if (existing) {
-    return existing as Persona;
+    return syncUserPersonaFromTemplate(
+      supabase,
+      userId,
+      existing as Persona,
+      template,
+    );
   }
 
   const { data: created, error: insertError } = await supabase
     .from("personas")
     .insert({
       user_id: userId,
-      name: catalogPersona.name,
-      slug: catalogPersona.slug,
-      base_tone: catalogPersona.base_tone,
-      relationship_type: catalogPersona.relationship_type,
-      world_type: catalogPersona.world_type,
-      static_prompt_json: catalogPersona.static_prompt_json,
-      version: catalogPersona.version,
+      name: template.name,
+      slug: template.slug,
+      base_tone: template.base_tone,
+      relationship_type: template.relationship_type,
+      world_type: template.world_type,
+      static_prompt_json: template.static_prompt_json,
+      version: template.version,
     })
-    .select(
-      "id, user_id, name, slug, base_tone, relationship_type, world_type, static_prompt_json, version, created_at, updated_at, deleted_at",
-    )
+    .select(PERSONA_SELECT)
     .single();
 
   if (insertError || !created) {
@@ -97,7 +121,7 @@ export async function ensureUserPersona(
     relationship_stage: "stranger",
     affinity: 0,
     trust_state: "neutral",
-    recent_mood: catalogPersona.base_tone,
+    recent_mood: template.base_tone,
     open_loops: [],
     state_source: "web",
     version: 1,
@@ -109,23 +133,22 @@ export async function ensureUserPersona(
 
 export async function ensureUserPersonas(userId: string): Promise<void> {
   for (const slug of CATALOG_PERSONA_SLUGS) {
-    const template = await getCatalogTemplate(slug);
+    const supabase = await createClient();
+    const template = await getCanonicalTemplateBySlug(supabase, slug);
     if (!template) continue;
 
-    if (template.user_id === userId) continue;
+    const { data: existing } = await supabase
+      .from("personas")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("slug", slug)
+      .is("deleted_at", null)
+      .maybeSingle();
 
-    const { data: existing } = await createClient()
-      .then((sb) =>
-        sb
-          .from("personas")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("slug", slug)
-          .is("deleted_at", null)
-          .maybeSingle(),
-      );
-
-    if (existing) continue;
+    if (existing) {
+      await ensureUserPersona(userId, existing.id);
+      continue;
+    }
 
     await ensureUserPersona(userId, template.id);
   }

@@ -238,8 +238,11 @@ export async function getConversation(
     .eq("is_current", true)
     .maybeSingle();
 
+  const resolvedPersona = await ensureUserPersona(user.id, conversationRow.persona_id);
+
   return {
     ...conversationRow,
+    personas: resolvedPersona ?? conversationRow.personas,
     persona_states: (personaState as PersonaState | null) ?? null,
   };
 }

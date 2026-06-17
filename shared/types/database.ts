@@ -30,6 +30,8 @@ export type PersonaPromptJson = {
     signature?: string[];
     avoid?: string[];
     sentence_shape?: string;
+    micro_patterns?: string[];
+    priority_override?: string;
   };
   first_message: string;
   safety_boundary?: Record<string, string>;

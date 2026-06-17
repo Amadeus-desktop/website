@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { CategoryFilters } from "@/features/characters/components/CategoryFilters";
 import { SortTabs } from "@/features/characters/components/SortTabs";
 import { PersonaGrid } from "@/features/personas/components/PersonaGrid";
+import { getCurrentUser } from "@/features/auth/actions/auth";
 import {
   matchesPersonaCategory,
   toPersonaCardView,
@@ -31,8 +32,8 @@ function sortPersonas(personas: PersonaCardView[], sort: string) {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const { q, category = "all", sort = "trending" } = await searchParams;
-  const locale = await getServerLocale();
-  const personas = (await getCatalogPersonas(q))
+  const [locale, user] = await Promise.all([getServerLocale(), getCurrentUser()]);
+  const personas = (await getCatalogPersonas(q, user?.id))
     .map(toPersonaCardView)
     .filter((persona) => matchesPersonaCategory(persona, category));
   const sorted = sortPersonas(personas, sort);

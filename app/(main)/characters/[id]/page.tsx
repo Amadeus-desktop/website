@@ -1,5 +1,9 @@
 import { StartChatButton } from "@/features/chat/components/StartChatButton";
-import { getPersonaById } from "@/features/personas/queries/personas";
+import { getCurrentUser } from "@/features/auth/actions/auth";
+import {
+  getPersonaById,
+  resolvePersonaForUser,
+} from "@/features/personas/queries/personas";
 import { notFound } from "next/navigation";
 
 type CharacterDetailPageProps = {
@@ -14,11 +18,15 @@ export default async function CharacterDetailPage({
   params,
 }: CharacterDetailPageProps) {
   const { id } = await params;
-  const persona = await getPersonaById(id);
+  const user = await getCurrentUser();
+  const basePersona = await getPersonaById(id);
 
-  if (!persona) {
+  if (!basePersona) {
     notFound();
   }
+
+  const persona =
+    user != null ? ((await resolvePersonaForUser(user.id, basePersona.id)) ?? basePersona) : basePersona;
 
   const prompt = persona.static_prompt_json;
 
