@@ -108,13 +108,20 @@ export function ChatRoom({
     setDraft("");
     setIsStreaming(true);
 
+    const userIdempotencyKey = `web:user:${conversationId}:${crypto.randomUUID()}`;
+    const assistantIdempotencyKey = `web:assistant:${conversationId}:${userIdempotencyKey}`;
+
     addMessage({
       id: `temp-${Date.now()}`,
       role: "user",
       content,
     });
 
-    const saveResult = await saveUserMessage(conversationId, content);
+    const saveResult = await saveUserMessage(
+      conversationId,
+      content,
+      userIdempotencyKey,
+    );
     if ("error" in saveResult) {
       setError(saveResult.error);
       setIsStreaming(false);
@@ -168,7 +175,11 @@ export function ChatRoom({
       }
 
       finalizeStreamingMessage();
-      await saveAssistantMessage(conversationId, fullContent.trim());
+      await saveAssistantMessage(
+        conversationId,
+        fullContent.trim(),
+        assistantIdempotencyKey,
+      );
 
       const updatedIntimacy = await updateIntimacy(conversationId, content);
       if (updatedIntimacy) {

@@ -83,6 +83,59 @@ Data stores: `cloud_conversations`, `cloud_conversation_messages`, `persona_stat
 
 ---
 
+## Web & Sync
+
+Web ↔ Desktop sync contract (full platform doc: pairing, sync queue, payload allowlist).
+
+### Web owns
+
+- Signup/login UI, persona editor (future), cloud chat UI, device pairing UI (future)
+- Server-side LLM calls only (never expose API keys to browser)
+
+### Web does not own
+
+- Desktop raw work context, local triggers, local LLM process, local private memory
+
+### Conversation sync (implemented)
+
+Canonical identity: **one active `cloud_conversations` row per `(user_id, persona_id)`**.
+
+| Layer | Rule | Code |
+| ----- | ---- | ---- |
+| Conversation | App/web share one thread per persona | `006_conversation_dedupe.sql`, `resolveCanonicalConversationId()` |
+| Message dedupe | `(user_id, conversation_id, idempotency_key)` unique | `upsertCloudMessage()` |
+| Message order | `client_created_at → source_device_id → client_sequence → server_received_at → id` | `sortCloudMessages()` |
+| Web surface | `surface = web` | `SYNC_SURFACES.web` |
+| App surface | `surface = app` (desktop upsert path) | mirrored into SQLite as `web_mirror` on app |
+| List UI | One row per persona slug after merge | `getConversations()` + `dedupeConversationsBySlug()` |
+| Race safety | Unique index + retry resolve on `23505` | `startConversation()` |
+
+```text
+App SQLite (pending)
+  -> Supabase upsert_cloud_conversation_message (idempotency_key)
+  -> ack with cloud_message_id
+
+Web Server Action
+  -> upsertCloudMessage (idempotency_key from client)
+  -> touchConversationLastMessage
+
+Supabase cloud_conversation_messages
+  -> App pull + dedupe by idempotency_key / cloud_message_id
+```
+
+### Auth boundary (web routes)
+
+| Route / Action | Auth | Client |
+| -------------- | ---- | ------ |
+| Persona CRUD | yes | user-scoped Supabase |
+| Cloud chat | yes | user-scoped + server LLM key |
+| Pairing (later) | yes | user-scoped → Edge Function |
+| Public catalog | no | cookie-less public client |
+
+Service role is **not** used in this Next.js app.
+
+---
+
 ## Caching Strategy
 
 Config: `shared/config/cache.ts`

@@ -99,8 +99,14 @@ export type CloudMessage = {
   content: string;
   provider: string | null;
   surface: string;
-  created_at: string;
+  source_device_id?: string | null;
+  local_message_id?: string | null;
+  idempotency_key?: string | null;
+  safety_grade?: string | null;
   client_created_at: string;
+  client_sequence?: number | null;
+  server_received_at?: string | null;
+  created_at: string;
 };
 
 export type Character = {

@@ -8,6 +8,17 @@ import {
   getLevelFromScore,
 } from "@/features/intimacy/lib/intimacy";
 import { sendMessageSchema } from "@/features/chat/schemas/chat";
+import {
+  conversationHasMessages,
+  dedupeConversationsBySlug,
+  mergeDuplicateConversations,
+  mergeDuplicateConversationsForUser,
+  resolveCanonicalConversationId,
+  sortCloudMessages,
+  touchConversationLastMessage,
+  upsertCloudMessage,
+} from "@/features/chat/lib/conversation-sync";
+import { SYNC_SURFACES } from "@/shared/config/sync";
 import { createClient } from "@/shared/lib/supabase/server";
 import type {
   ChatMode,
@@ -18,6 +29,10 @@ import type {
 } from "@/shared/types/database";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
+
+function isUniqueViolation(error: { code?: string } | null): boolean {
+  return error?.code === "23505";
+}
 
 export type StartConversationResult =
   | { conversationId: string }
@@ -41,21 +56,19 @@ async function insertCloudMessage(input: {
   personaId: string;
   role: "user" | "assistant";
   content: string;
+  idempotencyKey?: string;
 }) {
   const supabase = await createClient();
-  const now = new Date().toISOString();
 
-  return supabase.from("cloud_conversation_messages").insert({
-    user_id: input.userId,
-    conversation_id: input.conversationId,
-    persona_id: input.personaId,
+  return upsertCloudMessage(supabase, {
+    userId: input.userId,
+    conversationId: input.conversationId,
+    personaId: input.personaId,
     role: input.role,
     content: input.content,
+    idempotencyKey: input.idempotencyKey ?? randomUUID(),
     provider: getLLMProviderName(),
-    surface: "web",
-    idempotency_key: randomUUID(),
-    safety_grade: "green",
-    client_created_at: now,
+    surface: SYNC_SURFACES.web,
   });
 }
 
@@ -76,20 +89,17 @@ export async function startConversation(
     return { error: "페르소나를 불러오지 못했습니다" };
   }
 
-  const [{ data: existing }, firstMessage] = await Promise.all([
-    supabase
-      .from("cloud_conversations")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("persona_id", userPersona.id)
-      .is("deleted_at", null)
-      .maybeSingle(),
-    Promise.resolve(userPersona.static_prompt_json.first_message),
-  ]);
+  const canonicalId = await resolveCanonicalConversationId(
+    supabase,
+    user.id,
+    userPersona.id,
+  );
 
-  if (existing) {
-    return { conversationId: existing.id };
+  if (canonicalId) {
+    return { conversationId: canonicalId };
   }
+
+  const firstMessage = userPersona.static_prompt_json.first_message;
 
   const { data: conversation, error } = await supabase
     .from("cloud_conversations")
@@ -97,24 +107,50 @@ export async function startConversation(
       user_id: user.id,
       persona_id: userPersona.id,
       title: userPersona.name,
-      active_surface: "web",
+      active_surface: SYNC_SURFACES.web,
       last_message_at: new Date().toISOString(),
     })
     .select("id")
     .single();
 
-  if (error || !conversation) {
-    return { error: error?.message ?? "대화 생성에 실패했습니다" };
+  if (error) {
+    if (isUniqueViolation(error)) {
+      const racedCanonicalId = await resolveCanonicalConversationId(
+        supabase,
+        user.id,
+        userPersona.id,
+      );
+      if (racedCanonicalId) {
+        return { conversationId: racedCanonicalId };
+      }
+    }
+
+    return { error: error.message ?? "대화 생성에 실패했습니다" };
+  }
+
+  if (!conversation) {
+    return { error: "대화 생성에 실패했습니다" };
   }
 
   if (firstMessage) {
-    await insertCloudMessage({
-      userId: user.id,
-      conversationId: conversation.id,
-      personaId: userPersona.id,
-      role: "assistant",
-      content: firstMessage,
-    });
+    const hasMessages = await conversationHasMessages(supabase, conversation.id);
+    if (!hasMessages) {
+      const firstMessageKey = `web:first_message:${conversation.id}`;
+      const result = await insertCloudMessage({
+        userId: user.id,
+        conversationId: conversation.id,
+        personaId: userPersona.id,
+        role: "assistant",
+        content: firstMessage,
+        idempotencyKey: firstMessageKey,
+      });
+
+      if ("error" in result) {
+        console.error("startConversation first_message:", result.error);
+      } else {
+        await touchConversationLastMessage(supabase, conversation.id, user.id);
+      }
+    }
   }
 
   return { conversationId: conversation.id };
@@ -160,24 +196,50 @@ export async function getConversation(
     .select("*, personas(*)")
     .eq("id", conversationId)
     .eq("user_id", user.id)
-    .is("deleted_at", null)
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    console.error("getConversation error:", error);
+  if (error || !data) {
+    if (error) console.error("getConversation error:", error);
     return null;
+  }
+
+  const canonicalId = await mergeDuplicateConversations(
+    supabase,
+    user.id,
+    data.persona_id,
+  );
+
+  const resolvedId = canonicalId ?? data.id;
+
+  let conversationRow = data as ConversationWithPersona;
+
+  if (resolvedId !== conversationId || data.deleted_at) {
+    const { data: canonical, error: canonicalError } = await supabase
+      .from("cloud_conversations")
+      .select("*, personas(*)")
+      .eq("id", resolvedId)
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .single();
+
+    if (canonicalError || !canonical) {
+      console.error("getConversation canonical lookup:", canonicalError);
+      return null;
+    }
+
+    conversationRow = canonical as ConversationWithPersona;
   }
 
   const { data: personaState } = await supabase
     .from("persona_states")
     .select("*")
     .eq("user_id", user.id)
-    .eq("persona_id", data.persona_id)
+    .eq("persona_id", conversationRow.persona_id)
     .eq("is_current", true)
     .maybeSingle();
 
   return {
-    ...(data as ConversationWithPersona),
+    ...conversationRow,
     persona_states: (personaState as PersonaState | null) ?? null,
   };
 }
@@ -205,20 +267,37 @@ export async function getConversations(): Promise<ConversationWithPersona[]> {
   const conversations = (data ?? []) as ConversationWithPersona[];
 
   const personaIds = [...new Set(conversations.map((c) => c.persona_id))];
-  if (personaIds.length === 0) return conversations;
+  await mergeDuplicateConversationsForUser(supabase, user.id, personaIds);
+
+  const { data: refreshed, error: refreshError } = await supabase
+    .from("cloud_conversations")
+    .select("*, personas(*)")
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .order("last_message_at", { ascending: false });
+
+  if (refreshError) {
+    console.error("getConversations refresh error:", refreshError);
+    return dedupeConversationsBySlug(conversations);
+  }
+
+  const mergedConversations = (refreshed ?? []) as ConversationWithPersona[];
+  const deduped = dedupeConversationsBySlug(mergedConversations);
+  const dedupedPersonaIds = [...new Set(deduped.map((c) => c.persona_id))];
+  if (dedupedPersonaIds.length === 0) return deduped;
 
   const { data: states } = await supabase
     .from("persona_states")
     .select("*")
     .eq("user_id", user.id)
-    .in("persona_id", personaIds)
+    .in("persona_id", dedupedPersonaIds)
     .eq("is_current", true);
 
   const stateMap = new Map(
     (states ?? []).map((state) => [state.persona_id, state as PersonaState]),
   );
 
-  return conversations.map((conversation) => ({
+  return deduped.map((conversation) => ({
     ...conversation,
     persona_states: stateMap.get(conversation.persona_id) ?? null,
   }));
@@ -231,15 +310,14 @@ export async function getMessages(conversationId: string): Promise<CloudMessage[
     .from("cloud_conversation_messages")
     .select("*")
     .eq("conversation_id", conversationId)
-    .in("role", ["user", "assistant"])
-    .order("created_at", { ascending: true });
+    .in("role", ["user", "assistant"]);
 
   if (error) {
     console.error("getMessages error:", error);
     return [];
   }
 
-  return (data ?? []) as CloudMessage[];
+  return sortCloudMessages((data ?? []) as CloudMessage[]);
 }
 
 export async function updateChatMode(
@@ -273,8 +351,9 @@ export async function updateChatMode(
 export async function saveUserMessage(
   conversationId: string,
   content: string,
-): Promise<{ messageId: string } | { error: string }> {
-  const parsed = sendMessageSchema.safeParse({ conversationId, content });
+  idempotencyKey?: string,
+): Promise<{ messageId: string; idempotencyKey: string } | { error: string }> {
+  const parsed = sendMessageSchema.safeParse({ conversationId, content, idempotencyKey });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다" };
   }
@@ -299,41 +378,32 @@ export async function saveUserMessage(
     return { error: "대화를 찾을 수 없습니다" };
   }
 
-  const { data, error } = await supabase
-    .from("cloud_conversation_messages")
-    .insert({
-      user_id: user.id,
-      conversation_id: conversationId,
-      persona_id: conversation.persona_id,
-      role: "user",
-      content: parsed.data.content,
-      provider: getLLMProviderName(),
-      surface: "web",
-      idempotency_key: randomUUID(),
-      safety_grade: "green",
-      client_created_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
+  const messageKey = parsed.data.idempotencyKey ?? randomUUID();
 
-  if (error) {
-    return { error: error.message };
+  const result = await upsertCloudMessage(supabase, {
+    userId: user.id,
+    conversationId,
+    personaId: conversation.persona_id,
+    role: "user",
+    content: parsed.data.content,
+    idempotencyKey: messageKey,
+    provider: getLLMProviderName(),
+    surface: SYNC_SURFACES.web,
+  });
+
+  if ("error" in result) {
+    return { error: result.error };
   }
 
-  await supabase
-    .from("cloud_conversations")
-    .update({
-      last_message_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", conversationId);
+  await touchConversationLastMessage(supabase, conversationId, user.id);
 
-  return { messageId: data.id };
+  return { messageId: result.id, idempotencyKey: messageKey };
 }
 
 export async function saveAssistantMessage(
   conversationId: string,
   content: string,
+  idempotencyKey?: string,
 ): Promise<void> {
   const supabase = await createClient();
   const {
@@ -351,21 +421,21 @@ export async function saveAssistantMessage(
 
   if (!conversation) return;
 
-  await insertCloudMessage({
+  const result = await insertCloudMessage({
     userId: user.id,
     conversationId,
     personaId: conversation.persona_id,
     role: "assistant",
     content,
+    idempotencyKey: idempotencyKey ?? randomUUID(),
   });
 
-  await supabase
-    .from("cloud_conversations")
-    .update({
-      last_message_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", conversationId);
+  if ("error" in result) {
+    console.error("saveAssistantMessage error:", result.error);
+    return;
+  }
+
+  await touchConversationLastMessage(supabase, conversationId, user.id);
 }
 
 export async function updateIntimacy(

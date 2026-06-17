@@ -8,7 +8,7 @@ import {
 import { personaToChatContext } from "@/features/personas/lib/chat-context";
 import { getLevelFromScore } from "@/features/intimacy/lib/intimacy";
 import type { ChatMode } from "@/shared/types/database";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 type ChatPageProps = {
   params: Promise<{ id: string }>;
@@ -24,6 +24,10 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   if (!conversation) {
     notFound();
+  }
+
+  if (conversation.id !== id) {
+    redirect(`/chat/${conversation.id}`);
   }
 
   const personaContext = personaToChatContext(conversation.personas);
