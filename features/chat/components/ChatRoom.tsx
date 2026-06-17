@@ -9,9 +9,7 @@ import {
 import { ChatModeSelector } from "@/features/chat/components/ChatModeSelector";
 import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { useChatStore } from "@/features/chat/stores/chat-store";
-import { CHAT_MODE_COSTS } from "@/features/jam/lib/jam";
 import { IntimacyBar } from "@/features/intimacy/components/IntimacyBar";
-import { GiHoneyJar } from "@/shared/components/icons";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { Button } from "@/shared/components/ui/Button";
 import type { PersonaChatContext } from "@/features/personas/lib/chat-context";
@@ -32,7 +30,6 @@ type ChatRoomProps = {
   initialIntimacy: IntimacyState | null;
   initialChatMode: ChatMode;
   initialMemories: CharacterMemory[];
-  initialJamBalance: number;
 };
 
 export function ChatRoom({
@@ -42,12 +39,10 @@ export function ChatRoom({
   initialIntimacy,
   initialChatMode,
   initialMemories,
-  initialJamBalance,
 }: ChatRoomProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [chatMode, setChatMode] = useState<ChatMode>(initialChatMode);
-  const [jamBalance, setJamBalance] = useState(initialJamBalance);
   const [memories, setMemories] = useState(initialMemories);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,13 +76,11 @@ export function ChatRoom({
       setIntimacy(initialIntimacy.score, initialIntimacy.level);
     }
     setChatMode(initialChatMode);
-    setJamBalance(initialJamBalance);
     setMemories(initialMemories);
   }, [
     initialMessages,
     initialIntimacy,
     initialChatMode,
-    initialJamBalance,
     initialMemories,
     setMessages,
     setIntimacy,
@@ -111,12 +104,6 @@ export function ChatRoom({
     const content = draft.trim();
     if (!content || isStreaming) return;
 
-    const cost = CHAT_MODE_COSTS[chatMode];
-    if (jamBalance < cost) {
-      setError(`Jam이 부족합니다 (필요: ${cost}, 보유: ${jamBalance})`);
-      return;
-    }
-
     setError(null);
     setDraft("");
     setIsStreaming(true);
@@ -133,8 +120,6 @@ export function ChatRoom({
       setIsStreaming(false);
       return;
     }
-
-    setJamBalance(saveResult.jamBalance);
 
     addMessage({
       id: `stream-${Date.now()}`,
@@ -221,10 +206,6 @@ export function ChatRoom({
               compact
             />
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-600">
-            <GiHoneyJar className="h-3.5 w-3.5" aria-hidden />
-            {jamBalance}
-          </span>
         </div>
         <ChatModeSelector
           mode={chatMode}
@@ -270,7 +251,7 @@ export function ChatRoom({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`메시지를 입력하세요... (${CHAT_MODE_COSTS[chatMode]} Jam)`}
+            placeholder="메시지를 입력하세요..."
             disabled={isStreaming}
             rows={1}
             className="flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"

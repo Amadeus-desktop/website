@@ -1,8 +1,8 @@
 import {
   CHAT_MODE_DESCRIPTIONS,
   CHAT_MODE_LABELS,
-  type ChatMode,
-} from "@/features/jam/lib/jam";
+} from "@/features/chat/lib/modes";
+import type { ChatMode } from "@/shared/types/database";
 import { cn } from "@/shared/lib/cn";
 
 type ChatModeSelectorProps = {

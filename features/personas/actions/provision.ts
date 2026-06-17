@@ -35,7 +35,9 @@ export async function ensureUserPersona(
 
   const { data: catalogPersona, error: catalogError } = await supabase
     .from("personas")
-    .select("*")
+    .select(
+      "id, user_id, name, slug, base_tone, relationship_type, world_type, static_prompt_json, version",
+    )
     .eq("id", catalogPersonaId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -55,7 +57,9 @@ export async function ensureUserPersona(
 
   const { data: existing } = await supabase
     .from("personas")
-    .select("*")
+    .select(
+      "id, user_id, name, slug, base_tone, relationship_type, world_type, static_prompt_json, version, created_at, updated_at, deleted_at",
+    )
     .eq("user_id", userId)
     .eq("slug", catalogPersona.slug)
     .is("deleted_at", null)
@@ -77,7 +81,9 @@ export async function ensureUserPersona(
       static_prompt_json: catalogPersona.static_prompt_json,
       version: catalogPersona.version,
     })
-    .select("*")
+    .select(
+      "id, user_id, name, slug, base_tone, relationship_type, world_type, static_prompt_json, version, created_at, updated_at, deleted_at",
+    )
     .single();
 
   if (insertError || !created) {

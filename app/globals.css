@@ -45,6 +45,30 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-weight: 500;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+a.interactive-link {
+  transition:
+    color 0.15s ease,
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+a.interactive-link:hover {
+  opacity: 0.92;
+}
+
+a:not([class]) {
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+a:not([class]):hover {
+  opacity: 0.85;
 }
 
 * {

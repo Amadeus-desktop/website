@@ -5,7 +5,6 @@ import {
   getConversations,
   getMessages,
 } from "@/features/chat/actions/chat";
-import { getJamBalance } from "@/features/jam/actions/jam";
 import { personaToChatContext } from "@/features/personas/lib/chat-context";
 import { getLevelFromScore } from "@/features/intimacy/lib/intimacy";
 import type { ChatMode } from "@/shared/types/database";
@@ -17,11 +16,10 @@ type ChatPageProps = {
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const { id } = await params;
-  const [conversation, messages, conversations, jamBalance] = await Promise.all([
+  const [conversation, messages, conversations] = await Promise.all([
     getConversation(id),
     getMessages(id),
     getConversations(),
-    getJamBalance(),
   ]);
 
   if (!conversation) {
@@ -56,7 +54,6 @@ export default async function ChatPage({ params }: ChatPageProps) {
           initialIntimacy={intimacy}
           initialChatMode={(conversation.chat_mode as ChatMode) ?? "simple"}
           initialMemories={[]}
-          initialJamBalance={jamBalance?.balance ?? 0}
         />
       </div>
     </div>

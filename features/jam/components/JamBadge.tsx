@@ -1,6 +1,6 @@
 "use client";
 
-import { GiHoneyJar } from "@/shared/components/icons";
+import { GiHoneyJar } from "react-icons/gi";
 import { claimDailyJam } from "@/features/jam/actions/jam";
 import { canClaimDaily } from "@/features/jam/lib/jam";
 import { useT } from "@/shared/i18n/use-translate";

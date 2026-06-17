@@ -3,21 +3,18 @@
 import { HiMagnifyingGlass } from "@/shared/components/icons";
 import { APP_NAME } from "@/shared/config/app";
 import { TYPO } from "@/shared/config/layout";
-import { JamBadge } from "@/features/jam/components/JamBadge";
 import { logout } from "@/features/auth/actions/auth";
 import { LanguageSwitcher } from "@/shared/components/layout/LanguageSwitcher";
 import { useT } from "@/shared/i18n/use-translate";
-import type { JamBalance } from "@/shared/types/database";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type TopHeaderProps = {
   userEmail?: string;
-  jamBalance?: JamBalance | null;
 };
 
-export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
+export function TopHeader({ userEmail }: TopHeaderProps) {
   const t = useT();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -36,7 +33,7 @@ export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
       <div className="mx-auto flex h-[var(--header-h)] w-full max-w-[var(--content-max-w)] items-center justify-between gap-4 px-4 md:px-6">
         <Link
           href="/"
-          className={`font-bold tracking-tight text-primary ${TYPO.header}`}
+          className={`interactive-link font-bold tracking-tight text-primary ${TYPO.header}`}
         >
           {APP_NAME}
         </Link>
@@ -71,7 +68,12 @@ export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
             </button>
           )}
 
-          {jamBalance && <JamBadge balance={jamBalance} compact />}
+          <Link
+            href="/settings"
+            className="hidden h-10 items-center rounded-full px-3 text-sm font-medium text-muted hover:bg-surface hover:text-foreground sm:inline-flex"
+          >
+            {t("nav.settings")}
+          </Link>
 
           {userEmail ? (
             <div className="group relative">
@@ -80,6 +82,12 @@ export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
               </button>
               <div className="invisible absolute right-0 top-full z-50 mt-2 w-44 rounded-xl border border-border bg-surface p-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
                 <p className="truncate px-2 py-1 text-xs text-muted">{userEmail}</p>
+                <Link
+                  href="/settings"
+                  className="interactive-link block rounded-lg px-2 py-2 text-sm text-foreground hover:bg-surface-elevated"
+                >
+                  {t("nav.settings")}
+                </Link>
                 <form action={logout}>
                   <button
                     type="submit"
@@ -93,7 +101,7 @@ export function TopHeader({ userEmail, jamBalance }: TopHeaderProps) {
           ) : (
             <Link
               href="/login"
-              className="inline-flex h-8 items-center rounded-full bg-primary px-3 text-xs font-semibold text-white hover:opacity-90"
+              className="interactive-link inline-flex h-8 items-center rounded-full bg-primary px-3 text-xs font-semibold text-white hover:opacity-90"
             >
               {t("common.login")}
             </Link>

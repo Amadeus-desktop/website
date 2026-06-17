@@ -34,7 +34,7 @@ export function ConversationList({
             <Link
               href={`/chat/${conv.id}`}
               className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
+                "interactive-link flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
                 isActive
                   ? "bg-primary-soft text-primary"
                   : "hover:bg-surface-elevated text-foreground",

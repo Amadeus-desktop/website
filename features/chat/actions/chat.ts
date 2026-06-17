@@ -7,21 +7,22 @@ import {
   estimateIntimacyDelta,
   getLevelFromScore,
 } from "@/features/intimacy/lib/intimacy";
-import { getJamCost } from "@/features/jam/lib/jam";
-import { deductJam } from "@/features/jam/actions/jam";
 import { sendMessageSchema } from "@/features/chat/schemas/chat";
 import { createClient } from "@/shared/lib/supabase/server";
 import type {
   ChatMode,
   CloudMessage,
   ConversationWithPersona,
-  IntimacyLevel,
   IntimacyState,
   PersonaState,
 } from "@/shared/types/database";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { randomUUID } from "crypto";
+
+export type StartConversationResult =
+  | { conversationId: string }
+  | { error: string }
+  | { loginRequired: true };
 
 function personaStateToIntimacy(state: PersonaState | null): IntimacyState | null {
   if (!state) return null;
@@ -58,36 +59,36 @@ async function insertCloudMessage(input: {
   });
 }
 
-export async function createOrGetConversation(formData: FormData) {
-  const personaId = formData.get("personaId")?.toString();
-  if (!personaId) {
-    throw new Error("페르소나 ID가 필요합니다");
-  }
-
+export async function startConversation(
+  personaId: string,
+): Promise<StartConversationResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    return { loginRequired: true };
   }
 
   const userPersona = await ensureUserPersona(user.id, personaId);
   if (!userPersona) {
-    throw new Error("페르소나를 불러오지 못했습니다");
+    return { error: "페르소나를 불러오지 못했습니다" };
   }
 
-  const { data: existing } = await supabase
-    .from("cloud_conversations")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("persona_id", userPersona.id)
-    .is("deleted_at", null)
-    .maybeSingle();
+  const [{ data: existing }, firstMessage] = await Promise.all([
+    supabase
+      .from("cloud_conversations")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("persona_id", userPersona.id)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    Promise.resolve(userPersona.static_prompt_json.first_message),
+  ]);
 
   if (existing) {
-    redirect(`/chat/${existing.id}`);
+    return { conversationId: existing.id };
   }
 
   const { data: conversation, error } = await supabase
@@ -103,10 +104,9 @@ export async function createOrGetConversation(formData: FormData) {
     .single();
 
   if (error || !conversation) {
-    throw new Error(error?.message ?? "대화 생성에 실패했습니다");
+    return { error: error?.message ?? "대화 생성에 실패했습니다" };
   }
 
-  const firstMessage = userPersona.static_prompt_json.first_message;
   if (firstMessage) {
     await insertCloudMessage({
       userId: user.id,
@@ -117,7 +117,32 @@ export async function createOrGetConversation(formData: FormData) {
     });
   }
 
-  redirect(`/chat/${conversation.id}`);
+  return { conversationId: conversation.id };
+}
+
+/** @deprecated Use startConversation from client for loading UX */
+export async function createOrGetConversation(formData: FormData) {
+  const personaId = formData.get("personaId")?.toString();
+  if (!personaId) {
+    throw new Error("페르소나 ID가 필요합니다");
+  }
+
+  const result = await startConversation(personaId);
+  const { redirect } = await import("next/navigation");
+
+  if ("conversationId" in result) {
+    redirect(`/chat/${result.conversationId}`);
+  }
+
+  if ("loginRequired" in result) {
+    redirect("/login");
+  }
+
+  if ("error" in result) {
+    throw new Error(result.error);
+  }
+
+  throw new Error("대화를 시작하지 못했습니다");
 }
 
 export async function getConversation(
@@ -248,7 +273,7 @@ export async function updateChatMode(
 export async function saveUserMessage(
   conversationId: string,
   content: string,
-): Promise<{ messageId: string; jamBalance: number } | { error: string }> {
+): Promise<{ messageId: string } | { error: string }> {
   const parsed = sendMessageSchema.safeParse({ conversationId, content });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "입력값이 올바르지 않습니다" };
@@ -265,19 +290,13 @@ export async function saveUserMessage(
 
   const { data: conversation } = await supabase
     .from("cloud_conversations")
-    .select("chat_mode, persona_id")
+    .select("persona_id")
     .eq("id", conversationId)
     .eq("user_id", user.id)
     .single();
 
   if (!conversation) {
     return { error: "대화를 찾을 수 없습니다" };
-  }
-
-  const jamCost = getJamCost(conversation.chat_mode as ChatMode);
-  const jamResult = await deductJam(jamCost);
-  if ("error" in jamResult) {
-    return { error: jamResult.error };
   }
 
   const { data, error } = await supabase
@@ -309,7 +328,7 @@ export async function saveUserMessage(
     })
     .eq("id", conversationId);
 
-  return { messageId: data.id, jamBalance: jamResult.balance };
+  return { messageId: data.id };
 }
 
 export async function saveAssistantMessage(

@@ -26,7 +26,7 @@ export function IconSidebar() {
             href={item.href}
             title={t(item.labelKey)}
             className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
+              "interactive-link flex h-12 w-12 items-center justify-center rounded-2xl transition-colors",
               isActive
                 ? "bg-surface-elevated text-foreground"
                 : "text-muted hover:bg-surface hover:text-foreground",
