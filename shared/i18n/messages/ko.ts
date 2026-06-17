@@ -65,5 +65,15 @@ export const ko: Messages = {
   "install.page.description":
     "데스크톱 어디서든 Amadeus에 접속해 페르소나와 대화하고, 탭을 열지 않아도 필요할 때 바로 도움을 받아보세요.",
   "install.page.downloadMac": "macOS용 다운로드",
+  "install.page.downloadAppleSilicon": "Apple Silicon용 다운로드",
+  "install.page.downloadIntel": "Intel Mac용 다운로드",
+  "install.page.downloadUniversal": "Universal Mac용 다운로드",
+  "install.page.latestVersion": "최신 버전 v{version}",
+  "install.page.detectedMac": "감지된 Mac: {arch}",
+  "install.page.archAppleSilicon": "Apple Silicon",
+  "install.page.archIntel": "Intel",
+  "install.page.allReleases": "GitHub 릴리스 전체 보기",
+  "install.page.viewReleases": "GitHub 릴리스 보기",
+  "install.page.noRelease": "macOS 설치 파일이 올라오면 여기에서 바로 다운로드됩니다.",
   "install.page.comingSoon": "곧 출시됩니다",
 };

@@ -65,5 +65,15 @@ export const en: Messages = {
   "install.page.description":
     "Access Amadeus from anywhere on your desktop to chat with personas and get help on the fly without opening a tab.",
   "install.page.downloadMac": "Download for macOS",
+  "install.page.downloadAppleSilicon": "Download for Apple Silicon",
+  "install.page.downloadIntel": "Download for Intel Mac",
+  "install.page.downloadUniversal": "Download Universal Mac build",
+  "install.page.latestVersion": "Latest version v{version}",
+  "install.page.detectedMac": "Detected Mac: {arch}",
+  "install.page.archAppleSilicon": "Apple Silicon",
+  "install.page.archIntel": "Intel",
+  "install.page.allReleases": "View all GitHub releases",
+  "install.page.viewReleases": "View GitHub releases",
+  "install.page.noRelease": "The macOS installer will appear here once it is published.",
   "install.page.comingSoon": "Coming soon",
 };

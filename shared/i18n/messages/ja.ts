@@ -65,5 +65,15 @@ export const ja: Messages = {
   "install.page.description":
     "デスクトップのどこからでもAmadeusにアクセスし、ペルソナとの会話や必要なときのサポートを、タブを開かずに受けられます。",
   "install.page.downloadMac": "macOS版をダウンロード",
+  "install.page.downloadAppleSilicon": "Apple Silicon版をダウンロード",
+  "install.page.downloadIntel": "Intel Mac版をダウンロード",
+  "install.page.downloadUniversal": "Universal Mac版をダウンロード",
+  "install.page.latestVersion": "最新バージョン v{version}",
+  "install.page.detectedMac": "検出されたMac: {arch}",
+  "install.page.archAppleSilicon": "Apple Silicon",
+  "install.page.archIntel": "Intel",
+  "install.page.allReleases": "GitHubリリース一覧を見る",
+  "install.page.viewReleases": "GitHubリリースを見る",
+  "install.page.noRelease": "macOSインストーラーが公開されると、ここから直接ダウンロードできます。",
   "install.page.comingSoon": "近日公開",
 };
