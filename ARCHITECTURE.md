@@ -58,11 +58,25 @@ sequenceDiagram
 
 ## Auth Lifecycle
 
+Web and desktop share Supabase OAuth but finish differently:
+
+```text
+Web:  /auth/callback?code=... → exchangeCodeForSession → cookie → redirect /
+Desktop (Tauri bundle): /auth/callback?code=...&state=...
+  → exchange fails (PKCE verifier in app)
+  → 302 amadeus://auth/callback?code=...&state=...
+  → Tauri completes session locally
+```
+
+Optional explicit desktop marker: `?client=desktop` or `?protocol=amadeus` skips web exchange.
+Scheme env: `NEXT_PUBLIC_DESKTOP_AUTH_SCHEME` (default `amadeus`).
+
 | Phase | Trigger | Result |
 | ----- | ------- | ------ |
 | `anonymous` | No session cookie | Public pages + catalog browse |
 | `oauth-redirect` | Google sign-in click | Redirect to Supabase OAuth |
-| `callback-exchange` | `/auth/callback?code=` | Session cookie set |
+| `callback-exchange` | `/auth/callback?code=` (web) | Session cookie set |
+| `callback-desktop-bridge` | `/auth/callback?code=&state=` (desktop PKCE) | `302 → amadeus://auth/callback?...` |
 | `persona-provision` | After OAuth | Copy catalog personas to user (if missing) |
 | `authenticated` | Valid session | Chat, protected routes |
 
