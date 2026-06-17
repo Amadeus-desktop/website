@@ -34,9 +34,8 @@ export function shouldBridgeOAuthToDesktop(
   }
 
   const code = searchParams.get("code");
-  const state = searchParams.get("state");
 
-  if (!code || !state) {
+  if (!code) {
     return false;
   }
 

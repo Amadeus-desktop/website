@@ -4,8 +4,14 @@ import {
   isExplicitDesktopAuthCallback,
   shouldBridgeOAuthToDesktop,
 } from "@/features/auth/lib/desktop-callback";
+import { desktopAuthBridgeResponse } from "@/features/auth/lib/desktop-callback-bridge";
 import { createClient } from "@/shared/lib/supabase/server";
 import { NextResponse } from "next/server";
+
+function bridgeToDesktopApp(search: string): Response {
+  const deepLink = buildDesktopAuthCallbackUrl(search);
+  return desktopAuthBridgeResponse(deepLink);
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -14,7 +20,7 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/";
 
   if (isExplicitDesktopAuthCallback(searchParams)) {
-    return NextResponse.redirect(buildDesktopAuthCallbackUrl(url.search), 302);
+    return bridgeToDesktopApp(url.search);
   }
 
   let exchangeFailed = false;
@@ -40,7 +46,7 @@ export async function GET(request: Request) {
   }
 
   if (shouldBridgeOAuthToDesktop(searchParams, exchangeFailed)) {
-    return NextResponse.redirect(buildDesktopAuthCallbackUrl(url.search), 302);
+    return bridgeToDesktopApp(url.search);
   }
 
   return NextResponse.redirect(`${origin}/login`);
