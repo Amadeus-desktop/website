@@ -3,13 +3,13 @@ import type { Locale } from "@/shared/config/app";
 export type NavItem = {
   href: string;
   labelKey: string;
-  icon: "home" | "chat" | "create" | "settings";
+  icon: "home" | "chat" | "install" | "settings";
 };
 
 export const SIDEBAR_NAV: NavItem[] = [
   { href: "/", labelKey: "nav.home", icon: "home" },
   { href: "/chat", labelKey: "nav.chat", icon: "chat" },
-  { href: "/characters/new", labelKey: "nav.create", icon: "create" },
+  { href: "/install", labelKey: "nav.install", icon: "install" },
   { href: "/settings", labelKey: "nav.settings", icon: "settings" },
 ];
 

@@ -3,7 +3,7 @@ import type { Messages } from "@/shared/config/navigation";
 export const en: Messages = {
   "nav.home": "Home",
   "nav.chat": "Chat",
-  "nav.create": "Create",
+  "nav.install": "Install",
   "nav.settings": "Settings",
   "tabs.character": "Character",
   "tabs.feed": "Feed",
@@ -60,4 +60,10 @@ export const en: Messages = {
   "settings.accent.sky": "Sky",
   "settings.accent.mint": "Mint",
   "settings.accent.peach": "Peach",
+  "install.page.headline1": "Amadeus app, now",
+  "install.page.headline2Suffix": " on macOS",
+  "install.page.description":
+    "Access Amadeus from anywhere on your desktop to chat with personas and get help on the fly without opening a tab.",
+  "install.page.downloadMac": "Download for macOS",
+  "install.page.comingSoon": "Coming soon",
 };

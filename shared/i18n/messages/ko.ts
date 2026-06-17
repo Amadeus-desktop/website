@@ -3,7 +3,7 @@ import type { Messages } from "@/shared/config/navigation";
 export const ko: Messages = {
   "nav.home": "홈",
   "nav.chat": "대화",
-  "nav.create": "만들기",
+  "nav.install": "앱 설치",
   "nav.settings": "설정",
   "tabs.character": "캐릭터",
   "tabs.feed": "피드",
@@ -60,4 +60,10 @@ export const ko: Messages = {
   "settings.accent.sky": "스카이",
   "settings.accent.mint": "민트",
   "settings.accent.peach": "피치",
+  "install.page.headline1": "Amadeus 앱, 이제",
+  "install.page.headline2Suffix": "에서 사용 가능",
+  "install.page.description":
+    "데스크톱 어디서든 Amadeus에 접속해 페르소나와 대화하고, 탭을 열지 않아도 필요할 때 바로 도움을 받아보세요.",
+  "install.page.downloadMac": "macOS용 다운로드",
+  "install.page.comingSoon": "곧 출시됩니다",
 };

@@ -3,7 +3,7 @@ import type { Messages } from "@/shared/config/navigation";
 export const ja: Messages = {
   "nav.home": "ホーム",
   "nav.chat": "チャット",
-  "nav.create": "作成",
+  "nav.install": "アプリ",
   "nav.settings": "設定",
   "tabs.character": "キャラクター",
   "tabs.feed": "フィード",
@@ -60,4 +60,10 @@ export const ja: Messages = {
   "settings.accent.sky": "スカイ",
   "settings.accent.mint": "ミント",
   "settings.accent.peach": "ピーチ",
+  "install.page.headline1": "Amadeusアプリ、いま",
+  "install.page.headline2Suffix": "で利用可能",
+  "install.page.description":
+    "デスクトップのどこからでもAmadeusにアクセスし、ペルソナとの会話や必要なときのサポートを、タブを開かずに受けられます。",
+  "install.page.downloadMac": "macOS版をダウンロード",
+  "install.page.comingSoon": "近日公開",
 };
