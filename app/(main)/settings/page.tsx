@@ -1,4 +1,5 @@
 import { AccentColorPicker } from "@/shared/components/settings/AccentColorPicker";
+import { LanguageSelector } from "@/shared/components/settings/LanguageSelector";
 import { ThemeModeSelector } from "@/shared/components/settings/ThemeModeSelector";
 import { getServerLocale } from "@/shared/i18n/server";
 import { translate } from "@/shared/i18n";
@@ -16,6 +17,13 @@ export default async function SettingsPage() {
           {translate(locale, "settings.subtitle")}
         </p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">
+          {translate(locale, "settings.language.title")}
+        </h2>
+        <LanguageSelector />
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground">

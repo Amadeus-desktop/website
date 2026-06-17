@@ -22,6 +22,6 @@ export const useLocaleStore = create<LocaleStore>()(
         set({ locale });
       },
     }),
-    { name: "ld-locale" },
+    { name: "amadeus-locale" },
   ),
 );

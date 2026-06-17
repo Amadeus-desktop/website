@@ -4,7 +4,6 @@ import { HiMagnifyingGlass } from "@/shared/components/icons";
 import { APP_NAME } from "@/shared/config/app";
 import { TYPO } from "@/shared/config/layout";
 import { logout } from "@/features/auth/actions/auth";
-import { LanguageSwitcher } from "@/shared/components/layout/LanguageSwitcher";
 import { useT } from "@/shared/i18n/use-translate";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,8 +38,6 @@ export function TopHeader({ userEmail }: TopHeaderProps) {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <LanguageSwitcher compact />
-
           {searchOpen ? (
             <form onSubmit={handleSearch} className="flex items-center gap-2">
               <input

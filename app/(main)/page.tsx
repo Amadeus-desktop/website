@@ -11,6 +11,8 @@ import { getServerLocale } from "@/shared/i18n/server";
 import { translate } from "@/shared/i18n";
 import type { PersonaCardView } from "@/features/personas/lib/display";
 
+export const revalidate = 300;
+
 type HomePageProps = {
   searchParams: Promise<{ q?: string; category?: string; sort?: string }>;
 };

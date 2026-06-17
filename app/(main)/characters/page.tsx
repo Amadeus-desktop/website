@@ -2,6 +2,8 @@ import { PersonaGrid } from "@/features/personas/components/PersonaGrid";
 import { toPersonaCardView } from "@/features/personas/lib/display";
 import { getCatalogPersonas } from "@/features/personas/queries/personas";
 
+export const revalidate = 300;
+
 export default async function CharactersPage() {
   const personas = (await getCatalogPersonas()).map(toPersonaCardView);
 

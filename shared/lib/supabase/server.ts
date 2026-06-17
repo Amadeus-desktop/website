@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { getSupabaseEnv } from "@/shared/lib/supabase/env";
 
-export async function createClient() {
+/** One Supabase server client per request (deduped via React cache). */
+export const createClient = cache(async () => {
   const env = getSupabaseEnv();
   if (!env) {
     throw new Error(
@@ -28,4 +30,4 @@ export async function createClient() {
       },
     },
   });
-}
+});

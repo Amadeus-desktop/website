@@ -5,6 +5,7 @@ import { getPersonaTagKeys } from "@/features/personas/lib/display";
 import type { PersonaCardView } from "@/features/personas/lib/display";
 import { useT } from "@/shared/i18n/use-translate";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 function hashCode(str: string) {
   let hash = 0;
@@ -27,16 +28,21 @@ type PersonaCardProps = {
 
 export function PersonaCard({ persona }: PersonaCardProps) {
   const t = useT();
+  const router = useRouter();
   const tagKeys = getPersonaTagKeys(persona);
+  const href = `/characters/${persona.id}`;
 
   return (
     <Link
-      href={`/characters/${persona.id}`}
+      href={href}
+      prefetch
+      onMouseEnter={() => router.prefetch(href)}
+      onFocus={() => router.prefetch(href)}
       className="interactive-link group block min-w-0"
     >
       <div className="relative aspect-[3/4] min-h-[200px] overflow-hidden rounded-xl md:rounded-2xl md:min-h-[260px]">
         <div
-          className="flex h-full w-full items-end justify-center pb-10 transition-transform duration-300 group-hover:scale-[1.02]"
+          className="flex h-full w-full items-end justify-center pb-10 transition-transform duration-200 group-hover:scale-[1.02]"
           style={{ background: getGradient(persona.name) }}
         >
           <span className="text-6xl font-bold text-white/20 md:text-7xl">

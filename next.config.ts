@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    optimizePackageImports: ["react-icons", "react-icons/hi2", "react-icons/gi"],
+  },
 };
 
 export default nextConfig;

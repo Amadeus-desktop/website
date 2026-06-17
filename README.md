@@ -8,6 +8,10 @@ AI 캐릭터 채팅 웹앱. 별도 백엔드 없이 **Next.js App Router** (Serv
 - Supabase (Auth, Postgres, RLS)
 - Zustand, Zod
 
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for request lifecycle, caching, auth/chat flows, and layer conventions.
+
 ## Setup
 
 ```bash
