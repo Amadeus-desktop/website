@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { APP_NAME, APP_TAGLINE } from "@/shared/config/app";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LoveyDovey - Beyond Simple Chat, My Dream Talk",
+  title: `${APP_NAME} - ${APP_TAGLINE}`,
   description:
     "상상 속 캐릭터와 실시간 대화하고, 특별한 이야기를 만들어보세요.",
 };

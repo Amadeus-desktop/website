@@ -1,5 +1,5 @@
-export const APP_NAME = "LoveyDovey";
-export const APP_TAGLINE = "Beyond Simple Chat, My Dream Talk";
+export const APP_NAME = "Amadeus";
+export const APP_TAGLINE = "상상 속 캐릭터와 특별한 대화";
 
 export const DEFAULT_LOCALE = "ko" as const;
 export const LOCALES = ["ko", "en", "ja"] as const;
@@ -12,4 +12,4 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   ja: "日本語",
 };
 
-export const LOCALE_COOKIE = "ld_locale";
+export const LOCALE_COOKIE = "amadeus_locale";

@@ -17,7 +17,7 @@ export function RegisterForm() {
       <Input
         name="displayName"
         label="닉네임"
-        placeholder="러비"
+        placeholder="아마"
         required
         autoComplete="nickname"
       />

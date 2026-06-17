@@ -14,21 +14,21 @@ import { IntimacyBar } from "@/features/intimacy/components/IntimacyBar";
 import { GiHoneyJar } from "@/shared/components/icons";
 import { Avatar } from "@/shared/components/ui/Avatar";
 import { Button } from "@/shared/components/ui/Button";
+import type { PersonaChatContext } from "@/features/personas/lib/chat-context";
 import type {
-  Character,
   CharacterMemory,
   ChatMode,
+  CloudMessage,
   IntimacyLevel,
   IntimacyState,
-  Message,
 } from "@/shared/types/database";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 type ChatRoomProps = {
   conversationId: string;
-  character: Character;
-  initialMessages: Message[];
+  character: PersonaChatContext;
+  initialMessages: CloudMessage[];
   initialIntimacy: IntimacyState | null;
   initialChatMode: ChatMode;
   initialMemories: CharacterMemory[];
@@ -68,12 +68,14 @@ export function ChatRoom({
 
   useEffect(() => {
     setMessages(
-      initialMessages.map((m) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content,
-        created_at: m.created_at,
-      })),
+      initialMessages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          created_at: m.created_at,
+        })),
     );
     if (initialIntimacy) {
       setIntimacy(initialIntimacy.score, initialIntimacy.level);

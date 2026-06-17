@@ -1,7 +1,8 @@
 import { getLLMProvider } from "@/features/ai";
-import { buildSystemPrompt } from "@/features/ai/prompts/system-prompt";
+import { buildPersonaSystemPrompt } from "@/features/ai/prompts/persona-prompt";
 import { getConversation, getMessages } from "@/features/chat/actions/chat";
-import { getMemories } from "@/features/memory/actions/memory";
+import { personaToChatContext } from "@/features/personas/lib/chat-context";
+import { getLevelFromScore } from "@/features/intimacy/lib/intimacy";
 import { createClient } from "@/shared/lib/supabase/server";
 import type { ChatMode, IntimacyLevel } from "@/shared/types/database";
 
@@ -30,24 +31,22 @@ export async function POST(request: Request) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const [messages, memories] = await Promise.all([
-    getMessages(conversationId),
-    getMemories(conversationId),
-  ]);
-
-  const intimacyLevel =
-    (conversation.intimacy_states?.level as IntimacyLevel) ?? "stranger";
+  const messages = await getMessages(conversationId);
+  const persona = conversation.personas;
+  const affinity = conversation.persona_states?.affinity ?? 0;
+  const intimacyLevel = getLevelFromScore(affinity) as IntimacyLevel;
   const chatMode = (conversation.chat_mode as ChatMode) ?? "simple";
-  const memoryContents = memories.map((m) => m.content);
+  const relationshipStage = conversation.persona_states?.relationship_stage;
 
-  const character = conversation.characters;
-  const systemPrompt = buildSystemPrompt(
-    character,
+  const systemPrompt = buildPersonaSystemPrompt(
+    persona,
     intimacyLevel,
     chatMode,
-    memoryContents,
+    [],
+    relationshipStage,
   );
   const provider = getLLMProvider();
+  const chatContext = personaToChatContext(persona);
 
   const chatMessages = [
     ...messages.map((m) => ({
@@ -65,24 +64,26 @@ export async function POST(request: Request) {
           systemPrompt,
           messages: chatMessages,
           character: {
-            name: character.name,
-            personality: character.personality,
-            backstory: character.backstory,
-            greeting: character.greeting,
+            name: chatContext.name,
+            personality: chatContext.personality,
+            backstory: chatContext.backstory,
+            greeting: chatContext.greeting,
           },
           intimacyLevel,
           chatMode,
-          memories: memoryContents,
+          memories: [],
         })) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ content: chunk })}\n\n`),
           );
         }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-      } catch {
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "오류가 발생했습니다.";
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify({ content: "오류가 발생했습니다." })}\n\n`,
+            `data: ${JSON.stringify({ content: message })}\n\n`,
           ),
         );
       } finally {

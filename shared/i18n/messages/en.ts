@@ -25,7 +25,7 @@ export const en: Messages = {
   "common.noCharacters": "No characters yet",
   "feed.comingSoon": "Community feed is coming soon",
   "auth.loginTitle": "Login",
-  "auth.loginSubtitle": "Sign in to start your dream talk",
+  "auth.loginSubtitle": "Sign in to Amadeus and start chatting",
   "auth.registerTitle": "Sign up",
   "auth.registerSubtitle": "Create your character and start chatting",
   "character.startChat": "Start Chat",

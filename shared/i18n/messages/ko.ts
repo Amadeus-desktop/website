@@ -25,7 +25,7 @@ export const ko: Messages = {
   "common.noCharacters": "캐릭터가 없습니다",
   "feed.comingSoon": "커뮤니티 피드는 준비 중이에요",
   "auth.loginTitle": "로그인",
-  "auth.loginSubtitle": "러비더비에 로그인하고 대화를 시작하세요",
+  "auth.loginSubtitle": "Amadeus에 로그인하고 대화를 시작하세요",
   "auth.registerTitle": "회원가입",
   "auth.registerSubtitle": "나만의 캐릭터와 특별한 대화를 만들어보세요",
   "character.startChat": "대화 시작하기",

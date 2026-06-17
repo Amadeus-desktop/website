@@ -12,14 +12,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 
 function loadEnv() {
-  try {
-    const env = readFileSync(join(root, ".env"), "utf8");
-    for (const line of env.split("\n")) {
-      const m = line.match(/^([^#=]+)=(.*)$/);
-      if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, "");
+  for (const file of [".env.local", ".env"]) {
+    try {
+      const env = readFileSync(join(root, file), "utf8");
+      for (const line of env.split("\n")) {
+        const m = line.match(/^([^#=]+)=(.*)$/);
+        if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, "");
+      }
+    } catch {
+      // optional if vars set in shell
     }
-  } catch {
-    // .env optional if vars set in shell
   }
 }
 

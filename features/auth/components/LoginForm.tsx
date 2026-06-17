@@ -1,6 +1,7 @@
 "use client";
 
 import { login, type AuthActionState } from "@/features/auth/actions/auth";
+import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import Link from "next/link";
@@ -17,38 +18,48 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   );
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-4">
-      {redirectTo && (
-        <input type="hidden" name="redirect" value={redirectTo} />
-      )}
-      <Input
-        name="email"
-        type="email"
-        label="이메일"
-        placeholder="you@example.com"
-        required
-        autoComplete="email"
-      />
-      <Input
-        name="password"
-        type="password"
-        label="비밀번호"
-        placeholder="••••••••"
-        required
-        autoComplete="current-password"
-      />
-      {state.error && (
-        <p className="text-sm text-red-500">{state.error}</p>
-      )}
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "로그인 중..." : "로그인"}
-      </Button>
-      <p className="text-center text-sm text-muted">
-        계정이 없으신가요?{" "}
-        <Link href="/register" className="font-medium text-primary hover:underline">
-          회원가입
-        </Link>
-      </p>
-    </form>
+    <div className="flex w-full flex-col gap-4">
+      <GoogleSignInButton redirectTo={redirectTo} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted">또는</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form action={formAction} className="flex w-full flex-col gap-4">
+        {redirectTo && (
+          <input type="hidden" name="redirect" value={redirectTo} />
+        )}
+        <Input
+          name="email"
+          type="email"
+          label="이메일"
+          placeholder="you@example.com"
+          required
+          autoComplete="email"
+        />
+        <Input
+          name="password"
+          type="password"
+          label="비밀번호"
+          placeholder="••••••••"
+          required
+          autoComplete="current-password"
+        />
+        {state.error && (
+          <p className="text-sm text-red-500">{state.error}</p>
+        )}
+        <Button type="submit" className="w-full" disabled={isPending}>
+          {isPending ? "로그인 중..." : "이메일로 로그인"}
+        </Button>
+        <p className="text-center text-sm text-muted">
+          계정이 없으신가요?{" "}
+          <Link href="/register" className="font-medium text-primary hover:underline">
+            회원가입
+          </Link>
+        </p>
+      </form>
+    </div>
   );
 }

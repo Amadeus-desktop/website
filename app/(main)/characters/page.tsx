@@ -1,23 +1,17 @@
-import { CharacterGrid } from "@/features/characters/components/CharacterGrid";
-import { getCharacters } from "@/features/characters/queries/characters";
-import { Button } from "@/shared/components/ui/Button";
-import Link from "next/link";
+import { PersonaGrid } from "@/features/personas/components/PersonaGrid";
+import { toPersonaCardView } from "@/features/personas/lib/display";
+import { getCatalogPersonas } from "@/features/personas/queries/personas";
 
 export default async function CharactersPage() {
-  const characters = await getCharacters();
+  const personas = (await getCatalogPersonas()).map(toPersonaCardView);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">모든 캐릭터</h1>
-          <p className="text-sm text-muted">공식 및 커뮤니티 캐릭터</p>
-        </div>
-        <Link href="/characters/new">
-          <Button size="sm">+ 만들기</Button>
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">페르소나</h1>
+        <p className="text-sm text-muted">Amadeus 공식 페르소나</p>
       </div>
-      <CharacterGrid characters={characters} />
+      <PersonaGrid personas={personas} />
     </div>
   );
 }

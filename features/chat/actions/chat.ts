@@ -1,27 +1,67 @@
 "use server";
 
+import { getLLMProviderName } from "@/features/ai";
+import { ensureUserPersona } from "@/features/personas/actions/provision";
 import {
   calculateNewIntimacy,
   estimateIntimacyDelta,
+  getLevelFromScore,
 } from "@/features/intimacy/lib/intimacy";
 import { getJamCost } from "@/features/jam/lib/jam";
 import { deductJam } from "@/features/jam/actions/jam";
-import { saveMemoriesFromMessage } from "@/features/memory/actions/memory";
 import { sendMessageSchema } from "@/features/chat/schemas/chat";
 import { createClient } from "@/shared/lib/supabase/server";
 import type {
   ChatMode,
-  ConversationWithCharacter,
+  CloudMessage,
+  ConversationWithPersona,
+  IntimacyLevel,
   IntimacyState,
-  Message,
+  PersonaState,
 } from "@/shared/types/database";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomUUID } from "crypto";
+
+function personaStateToIntimacy(state: PersonaState | null): IntimacyState | null {
+  if (!state) return null;
+
+  return {
+    conversation_id: state.persona_id,
+    score: state.affinity,
+    level: getLevelFromScore(state.affinity),
+    updated_at: state.updated_at,
+  };
+}
+
+async function insertCloudMessage(input: {
+  userId: string;
+  conversationId: string;
+  personaId: string;
+  role: "user" | "assistant";
+  content: string;
+}) {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+
+  return supabase.from("cloud_conversation_messages").insert({
+    user_id: input.userId,
+    conversation_id: input.conversationId,
+    persona_id: input.personaId,
+    role: input.role,
+    content: input.content,
+    provider: getLLMProviderName(),
+    surface: "web",
+    idempotency_key: randomUUID(),
+    safety_grade: "green",
+    client_created_at: now,
+  });
+}
 
 export async function createOrGetConversation(formData: FormData) {
-  const characterId = formData.get("characterId")?.toString();
-  if (!characterId) {
-    throw new Error("캐릭터 ID가 필요합니다");
+  const personaId = formData.get("personaId")?.toString();
+  if (!personaId) {
+    throw new Error("페르소나 ID가 필요합니다");
   }
 
   const supabase = await createClient();
@@ -33,28 +73,31 @@ export async function createOrGetConversation(formData: FormData) {
     redirect("/login");
   }
 
+  const userPersona = await ensureUserPersona(user.id, personaId);
+  if (!userPersona) {
+    throw new Error("페르소나를 불러오지 못했습니다");
+  }
+
   const { data: existing } = await supabase
-    .from("conversations")
+    .from("cloud_conversations")
     .select("id")
     .eq("user_id", user.id)
-    .eq("character_id", characterId)
+    .eq("persona_id", userPersona.id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (existing) {
     redirect(`/chat/${existing.id}`);
   }
 
-  const { data: character } = await supabase
-    .from("characters")
-    .select("greeting")
-    .eq("id", characterId)
-    .single();
-
   const { data: conversation, error } = await supabase
-    .from("conversations")
+    .from("cloud_conversations")
     .insert({
       user_id: user.id,
-      character_id: characterId,
+      persona_id: userPersona.id,
+      title: userPersona.name,
+      active_surface: "web",
+      last_message_at: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -63,17 +106,14 @@ export async function createOrGetConversation(formData: FormData) {
     throw new Error(error?.message ?? "대화 생성에 실패했습니다");
   }
 
-  await supabase.from("intimacy_states").insert({
-    conversation_id: conversation.id,
-    score: 0,
-    level: "stranger",
-  });
-
-  if (character?.greeting) {
-    await supabase.from("messages").insert({
-      conversation_id: conversation.id,
+  const firstMessage = userPersona.static_prompt_json.first_message;
+  if (firstMessage) {
+    await insertCloudMessage({
+      userId: user.id,
+      conversationId: conversation.id,
+      personaId: userPersona.id,
       role: "assistant",
-      content: character.greeting,
+      content: firstMessage,
     });
   }
 
@@ -82,13 +122,20 @@ export async function createOrGetConversation(formData: FormData) {
 
 export async function getConversation(
   conversationId: string,
-): Promise<ConversationWithCharacter | null> {
+): Promise<ConversationWithPersona | null> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
 
   const { data, error } = await supabase
-    .from("conversations")
-    .select("*, characters(*), intimacy_states(*)")
+    .from("cloud_conversations")
+    .select("*, personas(*)")
     .eq("id", conversationId)
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
     .single();
 
   if (error) {
@@ -96,10 +143,21 @@ export async function getConversation(
     return null;
   }
 
-  return data as ConversationWithCharacter;
+  const { data: personaState } = await supabase
+    .from("persona_states")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("persona_id", data.persona_id)
+    .eq("is_current", true)
+    .maybeSingle();
+
+  return {
+    ...(data as ConversationWithPersona),
+    persona_states: (personaState as PersonaState | null) ?? null,
+  };
 }
 
-export async function getConversations(): Promise<ConversationWithCharacter[]> {
+export async function getConversations(): Promise<ConversationWithPersona[]> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -108,9 +166,10 @@ export async function getConversations(): Promise<ConversationWithCharacter[]> {
   if (!user) return [];
 
   const { data, error } = await supabase
-    .from("conversations")
-    .select("*, characters(*), intimacy_states(*)")
+    .from("cloud_conversations")
+    .select("*, personas(*)")
     .eq("user_id", user.id)
+    .is("deleted_at", null)
     .order("last_message_at", { ascending: false });
 
   if (error) {
@@ -118,16 +177,36 @@ export async function getConversations(): Promise<ConversationWithCharacter[]> {
     return [];
   }
 
-  return (data ?? []) as ConversationWithCharacter[];
+  const conversations = (data ?? []) as ConversationWithPersona[];
+
+  const personaIds = [...new Set(conversations.map((c) => c.persona_id))];
+  if (personaIds.length === 0) return conversations;
+
+  const { data: states } = await supabase
+    .from("persona_states")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("persona_id", personaIds)
+    .eq("is_current", true);
+
+  const stateMap = new Map(
+    (states ?? []).map((state) => [state.persona_id, state as PersonaState]),
+  );
+
+  return conversations.map((conversation) => ({
+    ...conversation,
+    persona_states: stateMap.get(conversation.persona_id) ?? null,
+  }));
 }
 
-export async function getMessages(conversationId: string): Promise<Message[]> {
+export async function getMessages(conversationId: string): Promise<CloudMessage[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("messages")
+    .from("cloud_conversation_messages")
     .select("*")
     .eq("conversation_id", conversationId)
+    .in("role", ["user", "assistant"])
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -135,7 +214,7 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []) as CloudMessage[];
 }
 
 export async function updateChatMode(
@@ -155,8 +234,8 @@ export async function updateChatMode(
   if (!user) return { error: "로그인이 필요합니다" };
 
   const { error } = await supabase
-    .from("conversations")
-    .update({ chat_mode: chatMode })
+    .from("cloud_conversations")
+    .update({ chat_mode: chatMode, updated_at: new Date().toISOString() })
     .eq("id", conversationId)
     .eq("user_id", user.id);
 
@@ -185,8 +264,8 @@ export async function saveUserMessage(
   }
 
   const { data: conversation } = await supabase
-    .from("conversations")
-    .select("chat_mode")
+    .from("cloud_conversations")
+    .select("chat_mode, persona_id")
     .eq("id", conversationId)
     .eq("user_id", user.id)
     .single();
@@ -202,11 +281,18 @@ export async function saveUserMessage(
   }
 
   const { data, error } = await supabase
-    .from("messages")
+    .from("cloud_conversation_messages")
     .insert({
+      user_id: user.id,
       conversation_id: conversationId,
+      persona_id: conversation.persona_id,
       role: "user",
       content: parsed.data.content,
+      provider: getLLMProviderName(),
+      surface: "web",
+      idempotency_key: randomUUID(),
+      safety_grade: "green",
+      client_created_at: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -216,11 +302,12 @@ export async function saveUserMessage(
   }
 
   await supabase
-    .from("conversations")
-    .update({ last_message_at: new Date().toISOString() })
+    .from("cloud_conversations")
+    .update({
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", conversationId);
-
-  await saveMemoriesFromMessage(conversationId, parsed.data.content);
 
   return { messageId: data.id, jamBalance: jamResult.balance };
 }
@@ -230,16 +317,35 @@ export async function saveAssistantMessage(
   content: string,
 ): Promise<void> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  await supabase.from("messages").insert({
-    conversation_id: conversationId,
+  if (!user) return;
+
+  const { data: conversation } = await supabase
+    .from("cloud_conversations")
+    .select("persona_id")
+    .eq("id", conversationId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!conversation) return;
+
+  await insertCloudMessage({
+    userId: user.id,
+    conversationId,
+    personaId: conversation.persona_id,
     role: "assistant",
     content,
   });
 
   await supabase
-    .from("conversations")
-    .update({ last_message_at: new Date().toISOString() })
+    .from("cloud_conversations")
+    .update({
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", conversationId);
 }
 
@@ -248,22 +354,42 @@ export async function updateIntimacy(
   userMessage: string,
 ): Promise<IntimacyState | null> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: conversation } = await supabase
+    .from("cloud_conversations")
+    .select("persona_id")
+    .eq("id", conversationId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!conversation) return null;
 
   const { data: current } = await supabase
-    .from("intimacy_states")
+    .from("persona_states")
     .select("*")
-    .eq("conversation_id", conversationId)
-    .single();
+    .eq("user_id", user.id)
+    .eq("persona_id", conversation.persona_id)
+    .eq("is_current", true)
+    .maybeSingle();
 
   if (!current) return null;
 
   const delta = estimateIntimacyDelta(userMessage);
-  const { score, level } = calculateNewIntimacy(current.score, delta);
+  const { score, level } = calculateNewIntimacy(current.affinity, delta);
 
   const { data, error } = await supabase
-    .from("intimacy_states")
-    .update({ score, level, updated_at: new Date().toISOString() })
-    .eq("conversation_id", conversationId)
+    .from("persona_states")
+    .update({
+      affinity: score,
+      relationship_stage: level,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", current.id)
     .select("*")
     .single();
 
@@ -273,5 +399,12 @@ export async function updateIntimacy(
   }
 
   revalidatePath(`/chat/${conversationId}`);
-  return data;
+  return personaStateToIntimacy(data as PersonaState);
+}
+
+export async function getConversationIntimacy(
+  conversationId: string,
+): Promise<IntimacyState | null> {
+  const conversation = await getConversation(conversationId);
+  return personaStateToIntimacy(conversation?.persona_states ?? null);
 }

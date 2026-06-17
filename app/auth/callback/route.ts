@@ -1,3 +1,4 @@
+import { ensureUserPersonas } from "@/features/personas/actions/provision";
 import { createClient } from "@/shared/lib/supabase/server";
 import { NextResponse } from "next/server";
 
@@ -10,6 +11,14 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        await ensureUserPersonas(user.id);
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
