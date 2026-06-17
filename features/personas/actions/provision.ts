@@ -4,6 +4,7 @@ import {
   CATALOG_PERSONA_SLUGS,
   isCatalogSlug,
 } from "@/features/personas/lib/catalog";
+import { getCatalogStateSeed } from "@/features/personas/catalog/state-seeds";
 import { PERSONA_SELECT } from "@/features/personas/lib/columns";
 import { getCanonicalTemplateBySlug } from "@/features/personas/lib/resolve-template";
 import { createClient } from "@/shared/lib/supabase/server";
@@ -115,14 +116,17 @@ export async function ensureUserPersona(
     return null;
   }
 
+  const stateSeed = getCatalogStateSeed(template.slug);
+
   await supabase.from("persona_states").insert({
     user_id: userId,
     persona_id: created.id,
-    relationship_stage: "stranger",
-    affinity: 0,
-    trust_state: "neutral",
-    recent_mood: template.base_tone,
-    open_loops: [],
+    relationship_stage: stateSeed?.relationship_stage ?? "stranger",
+    affinity: stateSeed?.affinity ?? 0,
+    trust_state: stateSeed?.trust_state ?? "neutral",
+    recent_mood: stateSeed?.recent_mood ?? template.base_tone,
+    open_loops: stateSeed?.open_loops ?? [],
+    boundary_overrides: stateSeed?.boundary_overrides ?? {},
     state_source: "web",
     version: 1,
     is_current: true,

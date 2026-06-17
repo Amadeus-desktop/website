@@ -1,4 +1,5 @@
 import type { LLMProvider, StreamChatParams } from "@/features/ai/types";
+import { sanitizePersonaReply } from "@/features/ai/prompts/persona-prompt";
 
 function calculateIntimacyDelta(userMessage: string): number {
   const affectionateKeywords = [
@@ -16,7 +17,7 @@ function calculateIntimacyDelta(userMessage: string): number {
   const lower = userMessage.toLowerCase();
   const matches = affectionateKeywords.filter((kw) => lower.includes(kw)).length;
   if (matches >= 2) return 3;
-  if (matches === 1) return 2;
+  if (matches >= 1) return 2;
   if (userMessage.length > 50) return 2;
   return 1;
 }
@@ -30,13 +31,10 @@ function pickFromSystemPrompt(systemPrompt: string, label: string): string | nul
 
 function generateMockResponse(params: StreamChatParams, userMessage: string): string {
   const register =
-    pickFromSystemPrompt(params.systemPrompt, "CRITICAL — 말투/성격 — 가장 중요") ??
+    pickFromSystemPrompt(params.systemPrompt, "CRITICAL — 말투/성격") ??
     params.character.personality;
 
-  const signatureBlock = pickFromSystemPrompt(
-    params.systemPrompt,
-    "시그니처 표현 (자주 사용)",
-  );
+  const signatureBlock = pickFromSystemPrompt(params.systemPrompt, "시그니처 표현");
   const signature = signatureBlock
     ?.split("\n")
     .find((line) => line.startsWith("- "))
@@ -44,13 +42,15 @@ function generateMockResponse(params: StreamChatParams, userMessage: string): st
     ?.replace(/^["']|["']$/g, "");
 
   const opener = signature ?? params.character.greeting;
-  const name = params.character.name;
 
   if (userMessage.includes("?") || userMessage.includes("？")) {
-    return `${name} (${register}) ${opener} … 네 질문, 다시 말해줄래?`;
+    return sanitizePersonaReply(
+      `${opener} … 네 질문, 다시 말해줄래?`,
+      params.character.name,
+    );
   }
 
-  return `${name}: ${opener}`;
+  return sanitizePersonaReply(opener, params.character.name);
 }
 
 export class MockProvider implements LLMProvider {

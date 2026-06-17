@@ -8,8 +8,15 @@ export type Profile = {
 export type PersonaPromptJson = {
   identity?: {
     name?: string;
+    age_band?: string;
     role?: string;
     core_traits?: string[];
+  };
+  canon_anchor?: {
+    source_priority?: string[];
+    official_verified_facts?: string[];
+    secondary_facts_use_lightly?: string[];
+    uncertain_or_not_used?: string[];
   };
   scenario?: {
     opening_scene?: string;
@@ -35,6 +42,15 @@ export type PersonaPromptJson = {
   };
   first_message: string;
   safety_boundary?: Record<string, string>;
+  scientific_boundary?: {
+    style?: string;
+    allowed?: string[];
+    not_allowed?: string[];
+  };
+  privacy_contract?: {
+    desktop_context?: string;
+    memory?: string;
+  };
   forbidden_claims?: string[];
   example_dialogues?: string[];
   negative_behavior?: string[];
@@ -42,6 +58,7 @@ export type PersonaPromptJson = {
     allowed?: string[];
     not_allowed?: string[];
   };
+  romance_tension_policy?: Record<string, string>;
 };
 
 export type Persona = {

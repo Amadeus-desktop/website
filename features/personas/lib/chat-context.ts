@@ -2,6 +2,7 @@ import type { Persona } from "@/shared/types/database";
 
 export type PersonaChatContext = {
   id: string;
+  slug: string;
   name: string;
   avatar_url: string | null;
   personality: string;
@@ -14,6 +15,7 @@ export function personaToChatContext(persona: Persona): PersonaChatContext {
 
   return {
     id: persona.id,
+    slug: persona.slug,
     name: persona.name,
     avatar_url: null,
     personality:

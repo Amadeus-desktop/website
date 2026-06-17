@@ -1,4 +1,15 @@
-import type { LLMProvider, StreamChatParams } from "@/features/ai/types";
+import type { ChatMode, LLMProvider, StreamChatParams } from "@/features/ai/types";
+
+function maxOutputTokens(chatMode: ChatMode): number {
+  switch (chatMode) {
+    case "long":
+      return 320;
+    case "exciting":
+      return 240;
+    default:
+      return 160;
+  }
+}
 
 function getGeminiConfig() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -29,8 +40,9 @@ export class GeminiProvider implements LLMProvider {
           parts: [{ text: message.content }],
         })),
         generationConfig: {
-          temperature: 0.85,
-          topP: 0.9,
+          temperature: 0.58,
+          topP: 0.88,
+          maxOutputTokens: maxOutputTokens(params.chatMode),
         },
       }),
     });

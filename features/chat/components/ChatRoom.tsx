@@ -1,5 +1,6 @@
 "use client";
 
+import { sanitizePersonaReply } from "@/features/ai/prompts/persona-prompt";
 import {
   saveAssistantMessage,
   saveUserMessage,
@@ -68,7 +69,10 @@ export function ChatRoom({
         .map((m) => ({
           id: m.id,
           role: m.role as "user" | "assistant",
-          content: m.content,
+          content:
+            m.role === "assistant"
+              ? sanitizePersonaReply(m.content, character.name, character.slug)
+              : m.content,
           created_at: m.created_at,
         })),
     );
@@ -82,6 +86,8 @@ export function ChatRoom({
     initialIntimacy,
     initialChatMode,
     initialMemories,
+    character.name,
+    character.slug,
     setMessages,
     setIntimacy,
   ]);
@@ -174,10 +180,16 @@ export function ChatRoom({
         }
       }
 
+      const reply = sanitizePersonaReply(
+        fullContent.trim(),
+        character.name,
+        character.slug,
+      );
+      updateStreamingMessage(reply);
       finalizeStreamingMessage();
       await saveAssistantMessage(
         conversationId,
-        fullContent.trim(),
+        reply,
         assistantIdempotencyKey,
       );
 

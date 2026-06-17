@@ -7,6 +7,7 @@ import {
   estimateIntimacyDelta,
   getLevelFromScore,
 } from "@/features/intimacy/lib/intimacy";
+import { sanitizePersonaReply } from "@/features/ai/prompts/persona-prompt";
 import { sendMessageSchema } from "@/features/chat/schemas/chat";
 import {
   conversationHasMessages,
@@ -424,12 +425,25 @@ export async function saveAssistantMessage(
 
   if (!conversation) return;
 
+  const { data: persona } = await supabase
+    .from("personas")
+    .select("name, slug")
+    .eq("id", conversation.persona_id)
+    .maybeSingle();
+
+  const personaName = persona?.name ?? "Amadeus";
+  const sanitizedContent = sanitizePersonaReply(
+    content,
+    personaName,
+    persona?.slug,
+  );
+
   const result = await insertCloudMessage({
     userId: user.id,
     conversationId,
     personaId: conversation.persona_id,
     role: "assistant",
-    content,
+    content: sanitizedContent,
     idempotencyKey: idempotencyKey ?? randomUUID(),
   });
 
@@ -472,13 +486,12 @@ export async function updateIntimacy(
   if (!current) return null;
 
   const delta = estimateIntimacyDelta(userMessage);
-  const { score, level } = calculateNewIntimacy(current.affinity, delta);
+  const { score } = calculateNewIntimacy(current.affinity, delta);
 
   const { data, error } = await supabase
     .from("persona_states")
     .update({
       affinity: score,
-      relationship_stage: level,
       updated_at: new Date().toISOString(),
     })
     .eq("id", current.id)
