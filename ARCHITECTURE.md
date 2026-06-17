@@ -68,8 +68,14 @@ Desktop (Tauri bundle): /auth/callback?code=...&state=...
   → Tauri completes session locally
 ```
 
-Optional explicit desktop marker: `?client=desktop` or `?protocol=amadeus` skips web exchange.
+Optional explicit desktop marker: `?client=desktop` skips web exchange and opens the app bridge immediately.
 Scheme env: `NEXT_PUBLIC_DESKTOP_AUTH_SCHEME` (default `amadeus`).
+
+Desktop bundle `redirectTo`:
+
+```text
+https://amadeus0.kro.kr/auth/callback?client=desktop
+```
 
 | Phase | Trigger | Result |
 | ----- | ------- | ------ |

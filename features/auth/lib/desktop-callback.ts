@@ -5,8 +5,16 @@ export const DESKTOP_AUTH_SCHEME =
 export const DESKTOP_AUTH_CALLBACK_PATH = "/auth/callback";
 
 export function buildDesktopAuthCallbackUrl(search: string): string {
-  const query = search.startsWith("?") ? search : search ? `?${search}` : "";
-  return `${DESKTOP_AUTH_SCHEME}://${DESKTOP_AUTH_CALLBACK_PATH.replace(/^\//, "")}${query}`;
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search,
+  );
+
+  params.delete("client");
+  params.delete("protocol");
+  params.delete("next");
+
+  const query = params.toString();
+  return `${DESKTOP_AUTH_SCHEME}://${DESKTOP_AUTH_CALLBACK_PATH.replace(/^\//, "")}${query ? `?${query}` : ""}`;
 }
 
 export function isExplicitDesktopAuthCallback(
